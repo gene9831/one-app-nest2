@@ -1,9 +1,29 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { GraphQLModule } from '@nestjs/graphql';
+import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { configurations } from './config';
+import { ConfigFactory } from './config/config.factory';
+import { MsalModule } from './msal/msal.module';
 
 @Module({
-  imports: [],
+  imports: [
+    ConfigModule.forRoot({
+      load: [configurations],
+      isGlobal: true,
+    }),
+    GraphQLModule.forRootAsync({
+      useClass: ConfigFactory,
+    }),
+    MongooseModule.forRootAsync({
+      useClass: ConfigFactory,
+    }),
+    MsalModule.registerAsync({
+      useClass: ConfigFactory,
+    }),
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

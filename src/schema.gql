@@ -1,0 +1,22 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type Account {
+  environment: String!
+  homeAccountId: String!
+  localAccountId: String!
+  name: String
+  tenantId: String!
+  username: String!
+}
+
+type Mutation {
+  removeAccount(homeAccountId: String!): Boolean!
+}
+
+type Query {
+  account(homeAccountId: String!): Account!
+  accounts: [Account!]!
+  authCodeUrl: String!
+}
