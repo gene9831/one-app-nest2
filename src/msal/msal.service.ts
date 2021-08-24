@@ -13,7 +13,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { MSAL_OPTIONS } from './constants';
 import { MsalModuleOptions } from './interfaces';
-import { TokenCache, TokenCacheDocument } from './models';
+import { TokenCache } from './models';
 
 @Injectable()
 export class MsalService extends ConfidentialClientApplication {
@@ -25,7 +25,7 @@ export class MsalService extends ConfidentialClientApplication {
   constructor(
     @Inject(MSAL_OPTIONS) options: MsalModuleOptions,
     @InjectModel(TokenCache.name)
-    private readonly tokenCacheModel: Model<TokenCacheDocument>,
+    readonly tokenCacheModel: Model<TokenCache>,
   ) {
     super({
       auth: options,

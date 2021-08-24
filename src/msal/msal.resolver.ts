@@ -23,6 +23,7 @@ export class MsalResolver {
     tokenCache?: TokenCache,
   ): Promise<Account> {
     // TODO 用过滤器过滤 httpCode 为 200 且响应内容为空 (null 或者 undefined) 的 Response，然后响应 404
+    // ! 这是GraphQL，不是普通的Response，不知道过滤器能不能实现
     return await (
       tokenCache || this.msalService.getTokenCache()
     ).getAccountByHomeId(homeAccountId);

@@ -1,4 +1,4 @@
-import { DynamicModule, Module, Provider } from '@nestjs/common';
+import { DynamicModule, Global, Module, Provider } from '@nestjs/common';
 import { MSAL_OPTIONS } from './constants';
 import { MsalModuleAsyncOptions, MsalOptionsFactory } from './interfaces';
 import { MsalService } from './msal.service';
@@ -7,6 +7,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { TokenCache, TokenCacheScheme } from './models';
 import { MsalResolver } from './msal.resolver';
 
+@Global()
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -15,9 +16,10 @@ import { MsalResolver } from './msal.resolver';
   ],
   providers: [MsalService, MsalResolver],
   controllers: [MsalController],
+  exports: [MsalService],
 })
 export class MsalModule {
-  public static registerAsync(options: MsalModuleAsyncOptions): DynamicModule {
+  static registerAsync(options: MsalModuleAsyncOptions): DynamicModule {
     return {
       module: MsalModule,
       imports: options.imports || [],
