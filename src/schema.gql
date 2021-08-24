@@ -11,7 +11,38 @@ type Account {
   username: String!
 }
 
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type Drive {
+  createdBy: IdentitySet!
+  createdDateTime: DateTime!
+  description: String!
+  driveType: String!
+  id: String!
+  lastModifiedBy: IdentitySet!
+  lastModifiedDateTime: DateTime!
+  name: String!
+  owner: IdentitySet
+  quota: Quota
+  webUrl: String!
+}
+
+type Identity {
+  displayName: String!
+  id: String
+}
+
+type IdentitySet {
+  application: Identity
+  device: Identity
+  user: Identity
+}
+
 type Mutation {
+  acquireDrives: [Drive!]!
   removeAccount(homeAccountId: String!): Boolean!
 }
 
@@ -19,4 +50,13 @@ type Query {
   account(homeAccountId: String!): Account!
   accounts: [Account!]!
   authCodeUrl: String!
+  drives: [Drive!]!
+}
+
+type Quota {
+  deleted: Float!
+  remaining: Float!
+  state: String!
+  total: Float!
+  used: Float!
 }

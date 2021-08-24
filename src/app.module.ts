@@ -7,6 +7,7 @@ import { AppService } from './app.service';
 import { configurations } from './config';
 import { ConfigFactory } from './config/config.factory';
 import { MsalModule } from './msal/msal.module';
+import { MsGraphModule } from './ms-graph/ms-graph.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { MsalModule } from './msal/msal.module';
     MsalModule.registerAsync({
       useClass: ConfigFactory,
     }),
+    MsGraphModule,
   ],
   controllers: [AppController],
   providers: [AppService],
