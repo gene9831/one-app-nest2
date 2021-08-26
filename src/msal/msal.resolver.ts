@@ -19,22 +19,22 @@ export class MsalResolver {
 
   @Query(() => Account)
   async account(
-    @Args('homeAccountId') homeAccountId: string,
+    @Args('localAccountId') localAccountId: string,
     tokenCache?: TokenCache,
   ): Promise<Account> {
     // TODO 用过滤器过滤 httpCode 为 200 且响应内容为空 (null 或者 undefined) 的 Response，然后响应 404
     // ! 这是GraphQL，不是普通的Response，不知道过滤器能不能实现
     return await (
       tokenCache || this.msalService.getTokenCache()
-    ).getAccountByHomeId(homeAccountId);
+    ).getAccountByLocalId(localAccountId);
   }
 
   @Mutation(() => Boolean)
   async removeAccount(
-    @Args('homeAccountId') homeAccountId: string,
+    @Args('localAccountId') localAccountId: string,
   ): Promise<boolean> {
     const tokenCache = this.msalService.getTokenCache();
-    const account = await this.account(homeAccountId, tokenCache);
+    const account = await this.account(localAccountId, tokenCache);
     return (
       Boolean(account) && !Boolean(await tokenCache.removeAccount(account))
     );
