@@ -67,6 +67,37 @@ export class DrivesService {
     return await this.driveItemModel.findOne({ id }).exec();
   }
 
+  async getDriveItemByPath(
+    path: string,
+    parentReferenceId?: string,
+  ): Promise<DriveItem> {
+    // 去掉开头的'/'，然后以 从左至右第一个出现的'/' 为分割符 分割成两个字符串
+    const [name, subPath] = path.replace(/^\/+/, '').split(/(?<=^[^/]+)\//);
+
+    if (!name) {
+      return await this.driveItemModel
+        .findOne({ root: { $exists: true } })
+        .exec();
+    }
+
+    parentReferenceId =
+      parentReferenceId ||
+      (await this.driveItemModel.findOne({ root: { $exists: true } }).exec())
+        .id;
+
+    const driveItems = await this.driveItemModel
+      .find({ 'parentReference.id': parentReferenceId })
+      .exec();
+
+    const driveItem = driveItems.find((driveItem) => driveItem.name === name);
+
+    return driveItem
+      ? subPath
+        ? this.getDriveItemByPath(subPath, driveItem.id)
+        : driveItem
+      : null;
+  }
+
   private async createUpdateTask(name = 'updateTask') {
     const updateResult = await this.updateTaskModel
       .updateOne({ _id: new Types.ObjectId() }, { name }, { upsert: true })

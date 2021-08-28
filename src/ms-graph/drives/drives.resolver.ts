@@ -62,4 +62,15 @@ export class DrivesResolver {
 
     return driveItem;
   }
+
+  @Query(() => DriveItem)
+  async getDriveItemByPath(@Args('path') path: string) {
+    const driveItem = await this.drivesService.getDriveItemByPath(path);
+
+    if (!driveItem) {
+      throw new NotFoundException();
+    }
+
+    return driveItem;
+  }
 }

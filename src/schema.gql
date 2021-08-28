@@ -91,6 +91,7 @@ type Query {
   driveItem(id: String!): DriveItem!
   driveItems(limit: Int = 20, order: Order = ASC, parentReferenceId: String!, skip: Int = 0, sortKey: String): [DriveItem!]!
   drives: [Drive!]!
+  getDriveItemByPath(path: String!): DriveItem!
   updateTask(id: ObjectId!): UpdateTask!
 }
 
