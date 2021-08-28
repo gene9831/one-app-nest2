@@ -30,6 +30,34 @@ type Drive {
   webUrl: String!
 }
 
+type DriveItem {
+  createdBy: IdentitySet!
+  createdDateTime: DateTime!
+  description: String!
+  file: File
+  folder: Folder
+  id: String!
+  lastModifiedDateTime: DateTime!
+  name: String!
+  size: Float!
+}
+
+type File {
+  hashes: Hashes!
+  mimeType: String!
+}
+
+type Folder {
+  childCount: Int!
+}
+
+type Hashes {
+  crc32Hash: String
+  quickXorHash: String
+  sha1Hash: String
+  sha256Hash: String
+}
+
 type Identity {
   displayName: String!
   id: String
@@ -42,14 +70,23 @@ type IdentitySet {
 }
 
 type Mutation {
-  acquireDrives: [Drive!]!
-  removeAccount(homeAccountId: String!): Boolean!
+  removeAccount(localAccountId: String!): Boolean!
+  removeDrive(localAccountId: String!): Boolean!
+  updateDrive(localAccountId: String!): String!
+  updateDrives(localAccountIds: [String!]): String!
+}
+
+enum Order {
+  ASC
+  DESC
 }
 
 type Query {
-  account(homeAccountId: String!): Account!
+  account(localAccountId: String!): Account!
   accounts: [Account!]!
   authCodeUrl: String!
+  driveItem(id: String!): DriveItem!
+  driveItems(limit: Int = 20, order: Order = ASC, parentReferenceId: String!, skip: Int = 0, sortKey: String): [DriveItem!]!
   drives: [Drive!]!
 }
 

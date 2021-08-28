@@ -1,4 +1,5 @@
 import { TokenCache } from '@azure/msal-node';
+import { NotFoundException } from '@nestjs/common';
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { Account } from './models';
 import { MsalService } from './msal.service';
@@ -22,11 +23,15 @@ export class MsalResolver {
     @Args('localAccountId') localAccountId: string,
     tokenCache?: TokenCache,
   ): Promise<Account> {
-    // TODO 用过滤器过滤 httpCode 为 200 且响应内容为空 (null 或者 undefined) 的 Response，然后响应 404
-    // ! 这是GraphQL，不是普通的Response，不知道过滤器能不能实现
-    return await (
+    const accout = await (
       tokenCache || this.msalService.getTokenCache()
     ).getAccountByLocalId(localAccountId);
+
+    if (!accout) {
+      throw new NotFoundException();
+    }
+
+    return accout;
   }
 
   @Mutation(() => Boolean)
@@ -35,8 +40,8 @@ export class MsalResolver {
   ): Promise<boolean> {
     const tokenCache = this.msalService.getTokenCache();
     const account = await this.account(localAccountId, tokenCache);
-    return (
-      Boolean(account) && !Boolean(await tokenCache.removeAccount(account))
-    );
+
+    await tokenCache.removeAccount(account);
+    return true;
   }
 }

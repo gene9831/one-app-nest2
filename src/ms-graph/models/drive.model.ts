@@ -1,11 +1,10 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-import { IdentitySet } from './identity.model';
-import { Quota } from './quota.model';
+import { IdentitySet, Quota } from './others.model';
 
 /**
- * https://docs.microsoft.com/en-us/graph/api/resources/drive?view=graph-rest-1.0
+ * https://docs.microsoft.com/en-us/graph/api/resources/drive?view=graph-rest-1.0#properties
  */
 @Schema({ timestamps: true })
 @ObjectType()
@@ -54,11 +53,8 @@ export class Drive extends Document {
   @Field()
   webUrl: string;
 
-  updateFields: (partial: Partial<Drive>) => this;
+  @Prop()
+  deltaLink?: string;
 }
 
 export const DriveScheme = SchemaFactory.createForClass(Drive);
-
-DriveScheme.methods.updateFields = function (partial: Partial<Drive>) {
-  return Object.assign(this, partial);
-};

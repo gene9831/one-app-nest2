@@ -1,4 +1,5 @@
 // created from 'create-ts-index'
 
-export * from './configuration';
+export * from './config.factory';
 export * from './config.validation';
+export * from './configuration';

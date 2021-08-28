@@ -51,13 +51,13 @@ export class MsalService extends ConfidentialClientApplication {
         },
       },
       system: {
-        loggerOptions: {
-          loggerCallback(loglevel, message, containsPii) {
-            console.log(message);
-          },
-          piiLoggingEnabled: false,
-          logLevel: LogLevel.Info,
-        },
+        // loggerOptions: {
+        //   loggerCallback(loglevel, message, containsPii) {
+        //     console.log(message);
+        //   },
+        //   piiLoggingEnabled: false,
+        //   logLevel: LogLevel.Info,
+        // },
       },
     });
     this.options = options;

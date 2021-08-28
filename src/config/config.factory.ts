@@ -5,12 +5,21 @@ import {
   MongooseModuleOptions,
   MongooseOptionsFactory,
 } from '@nestjs/mongoose';
+import {
+  WinstonModuleOptions,
+  WinstonModuleOptionsFactory,
+} from 'nest-winston';
 import { join } from 'path';
 import { MsalModuleOptions, MsalOptionsFactory } from 'src/msal/interfaces';
+import * as winston from 'winston';
 
 @Injectable()
 export class ConfigFactory
-  implements GqlOptionsFactory, MongooseOptionsFactory, MsalOptionsFactory
+  implements
+    GqlOptionsFactory,
+    MongooseOptionsFactory,
+    MsalOptionsFactory,
+    WinstonModuleOptionsFactory
 {
   constructor(private readonly configService: ConfigService) {}
 
@@ -31,7 +40,36 @@ export class ConfigFactory
   }
 
   createMsalOptions(): MsalModuleOptions | Promise<MsalModuleOptions> {
-    // console.log(this.configService);
     return this.configService.get('msal');
+  }
+
+  createWinstonModuleOptions():
+    | Promise<WinstonModuleOptions>
+    | WinstonModuleOptions {
+    const logfiles = this.configService.get<
+      Array<{
+        level: string;
+        dirname: string;
+        filename: string;
+      }>
+    >('logfiles');
+    const config = this.configService.get<WinstonModuleOptions>('winston');
+    const transports = Array.isArray(config.transports)
+      ? config.transports || []
+      : [config.transports];
+    return {
+      ...config,
+      transports: transports.concat(
+        logfiles.map(
+          ({ level, dirname, filename }) =>
+            new winston.transports.File({
+              level,
+              dirname,
+              filename,
+              format: winston.format.uncolorize(),
+            }),
+        ),
+      ),
+    };
   }
 }

@@ -13,6 +13,19 @@ export const validate = (config: Record<string, unknown>) => {
     env: Joi.string()
       .valid('development', 'production', 'test', 'provision')
       .default('development'),
+    logfiles: Joi.array()
+      .items(
+        Joi.object({
+          level: Joi.string()
+            .valid('error', 'warn', 'info', 'verbose', 'debug')
+            .default('info'),
+          dirname: Joi.string().default('logs'),
+          filename: Joi.string().default(
+            Joi.ref('level', { adjust: (value) => `${value}.log` }),
+          ),
+        }),
+      )
+      .default([]),
     msal: Joi.object({
       clientId: Joi.string().required(),
       authority: Joi.string(),
