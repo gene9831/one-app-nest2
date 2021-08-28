@@ -9,6 +9,7 @@ import { ConfigFactory, configurations } from './config';
 import { MsGraphModule } from './ms-graph/ms-graph.module';
 import { MsalModule } from './msal/msal.module';
 import { TestModule } from './test/test.module';
+import { GqlScalarsModule } from './gql-scalars/gql-scalar.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { TestModule } from './test/test.module';
     GraphQLModule.forRootAsync({
       useClass: ConfigFactory,
     }),
+    GqlScalarsModule,
     MongooseModule.forRootAsync({
       useClass: ConfigFactory,
     }),

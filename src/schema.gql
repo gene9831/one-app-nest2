@@ -76,6 +76,9 @@ type Mutation {
   updateDrives(localAccountIds: [String!]): String!
 }
 
+"""Mongodb ObjectId custom scalar type"""
+scalar ObjectId
+
 enum Order {
   ASC
   DESC
@@ -88,6 +91,7 @@ type Query {
   driveItem(id: String!): DriveItem!
   driveItems(limit: Int = 20, order: Order = ASC, parentReferenceId: String!, skip: Int = 0, sortKey: String): [DriveItem!]!
   drives: [Drive!]!
+  updateTask(id: ObjectId!): UpdateTask!
 }
 
 type Quota {
@@ -96,4 +100,11 @@ type Quota {
   state: String!
   total: Float!
   used: Float!
+}
+
+"""更新任务完成后，再过5分钟自动删除更新记录"""
+type UpdateTask {
+  completed: Boolean!
+  name: String!
+  progress: Float!
 }

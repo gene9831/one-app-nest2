@@ -93,7 +93,7 @@ export class DrivesService {
 
     updateTaskId &&
       (await this.updateTaskModel
-        .updateOne({ _id: updateTaskId }, { finished: true })
+        .updateOne({ _id: updateTaskId }, { completed: true })
         .exec());
   }
 

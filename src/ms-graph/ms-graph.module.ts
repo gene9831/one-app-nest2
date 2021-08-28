@@ -11,6 +11,8 @@ import {
   UpdateTask,
   UpdateTaskScheme,
 } from './models';
+import { UpdateTaskService } from './update-task/update-task.service';
+import { UpdateTaskResolver } from './update-task/update-task.resolver';
 
 @Module({
   imports: [
@@ -30,6 +32,6 @@ import {
     ]),
     HttpModule,
   ],
-  providers: [DriveApisService, DrivesService, DrivesResolver],
+  providers: [DriveApisService, DrivesService, DrivesResolver, UpdateTaskService, UpdateTaskResolver],
 })
 export class MsGraphModule {}
