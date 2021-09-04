@@ -72,8 +72,8 @@ type IdentitySet {
 type Mutation {
   removeAccount(localAccountId: String!): Boolean!
   removeDrive(localAccountId: String!): Boolean!
-  updateDrive(localAccountId: String!): String!
-  updateDrives(localAccountIds: [String!]): String!
+  updateDrive(entire: Boolean = false, localAccountId: String!): String!
+  updateDrives(entire: Boolean = false, localAccountIds: [String!]): String!
 }
 
 """Mongodb ObjectId custom scalar type"""

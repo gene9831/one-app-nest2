@@ -17,15 +17,19 @@ export class DrivesResolver {
   async updateDrives(
     @Args('localAccountIds', { type: () => [String], nullable: true })
     localAccountIds?: string[],
+    @Args('entire', { type: () => Boolean, defaultValue: false })
+    entire = false,
   ): Promise<string> {
-    return await this.drivesService.updateDrives(localAccountIds);
+    return await this.drivesService.updateDrives(localAccountIds, entire);
   }
 
   @Mutation(() => String)
   async updateDrive(
     @Args('localAccountId') localAccountId: string,
+    @Args('entire', { type: () => Boolean, defaultValue: false })
+    entire = false,
   ): Promise<string> {
-    return await this.drivesService.updateDrives(localAccountId);
+    return await this.drivesService.updateDrives(localAccountId, entire);
   }
 
   @Mutation(() => Boolean)
@@ -34,7 +38,7 @@ export class DrivesResolver {
   ): Promise<boolean> {
     const res = await this.drivesService.remove(localAccountId);
 
-    if (res.deletedCount === 0) {
+    if (!res) {
       throw new NotFoundException();
     }
 

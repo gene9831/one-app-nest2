@@ -25,7 +25,7 @@ export class DrivesService {
     return await this.driveModel.find().exec();
   }
 
-  async updateDrives(localAccountIds?: string | string[]) {
+  async updateDrives(localAccountIds?: string | string[], entire = false) {
     const tokenCache = this.msalService.getTokenCache();
 
     const accounts = new Array<AccountInfo>();
@@ -42,15 +42,32 @@ export class DrivesService {
 
     const updateTaskId = await this.createUpdateTask();
 
-    this.updateDrivesAsync(accounts, updateTaskId);
+    this.updateDrivesAsync(accounts, entire, updateTaskId);
 
     return updateTaskId;
   }
 
   async remove(localAccountId: string) {
-    return await this.driveModel
-      .deleteMany({ 'owner.user.id': localAccountId })
+    const drive = await this.driveModel
+      .findOne({
+        'owner.user.id': localAccountId,
+      })
       .exec();
+
+    if (!drive) {
+      return false;
+    }
+
+    // 删除driveItems
+    await this.driveItemModel
+      .deleteMany({
+        'parentReference.driveId': drive.id,
+      })
+      .exec();
+    // 删除drive
+    await drive.remove();
+
+    return true;
   }
 
   async listDriveItems(parentReferenceId: string, pagination?: Pagination) {
@@ -108,10 +125,11 @@ export class DrivesService {
 
   private async updateDrivesAsync(
     accounts: AccountInfo[],
+    entire = false,
     updateTaskId?: string,
   ) {
     for (const [i, account] of accounts.entries()) {
-      await this.updateDriveAsync(account);
+      await this.updateDriveAsync(account, entire);
 
       updateTaskId &&
         (await this.updateTaskModel
@@ -128,25 +146,29 @@ export class DrivesService {
         .exec());
   }
 
-  private async updateDriveAsync(account: AccountInfo) {
+  private async updateDriveAsync(account: AccountInfo, entire = false) {
     const accessToken = (await this.msalService.acquireTokenSilent({ account }))
       .accessToken;
 
     // TODO 抛出异常待处理
-    const drive = (await this.driveApisService.drive(accessToken)).data;
+    const newDrive = (await this.driveApisService.drive(accessToken)).data;
 
-    const updatedDrive = await this.driveModel
+    const drive = await this.driveModel
       .findOneAndUpdate(
-        { id: drive.id },
-        { $set: drive },
+        { id: newDrive.id },
+        { $set: newDrive },
         { upsert: true, new: true },
       )
       .exec();
 
     this.logger.log(drive.id, 'updateDrive');
 
-    let nextLink = updatedDrive.deltaLink;
+    let nextLink = entire ? null : drive.deltaLink;
     let deltaLink: string;
+
+    entire = !Boolean(nextLink) || entire;
+    const lastEntireUpdateTag = drive.entireUpdateTag;
+    const newEntireUpdateTag = `${Date.now()}`;
 
     while (!deltaLink) {
       // TODO 抛出异常待处理
@@ -166,32 +188,60 @@ export class DrivesService {
           return true;
         })
         .map((driveItem) => {
-          console.log(driveItem);
-          return {
-            updateOne: {
-              filter: { id: driveItem.id },
-              update: { $set: driveItem },
-              upsert: true,
-            },
-          };
+          // console.log(driveItem);
+          return driveItem.deleted
+            ? { deleteOne: { filter: { id: driveItem.id } } }
+            : {
+                updateOne: {
+                  filter: { id: driveItem.id },
+                  update: {
+                    $set: {
+                      ...driveItem,
+                      ...(entire
+                        ? { entireUpdateTag: newEntireUpdateTag }
+                        : {}),
+                    },
+                  },
+                  upsert: true,
+                },
+              };
         });
 
       const bulkWriteResult = await this.driveItemModel.bulkWrite(writes);
 
       const pickedRes = this._pick(bulkWriteResult, [
-        'insertedCount',
-        'matchedCount',
-        'modifiedCount',
-        'deletedCount',
-        'upsertedCount',
+        'nInserted',
+        'nUpserted',
+        'nMatched',
+        'nModified',
+        'nRemoved',
       ]);
 
       this.logger.log({ message: drive.id, ...pickedRes }, 'updateItems');
     }
 
+    // 删除无效数据
+    if (entire && lastEntireUpdateTag) {
+      await this.driveItemModel
+        .deleteMany({
+          'parentReference.driveId': drive.id,
+          // entireUpdateTag 不等于 newEntireUpdateTag
+          entireUpdateTag: { $ne: newEntireUpdateTag },
+        })
+        .exec();
+    }
+
     // 保存deltaLink
     await this.driveModel
-      .updateOne({ id: drive.id }, { $set: { deltaLink } })
+      .updateOne(
+        { id: drive.id },
+        {
+          $set: {
+            deltaLink,
+            ...(entire ? { entireUpdateTag: newEntireUpdateTag } : {}),
+          },
+        },
+      )
       .exec();
   }
 

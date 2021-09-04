@@ -55,6 +55,9 @@ export class Drive extends Document {
 
   @Prop()
   deltaLink?: string;
+
+  @Prop()
+  entireUpdateTag?: string;
 }
 
 export const DriveScheme = SchemaFactory.createForClass(Drive);

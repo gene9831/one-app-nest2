@@ -92,6 +92,12 @@ export class DriveItem extends Document {
 
   @Prop({ required: true })
   webUrl: string;
+
+  /**
+   * 全量更新的标签。全量更新后标签不是最新标签，则表示这个driveItem数据已失效
+   */
+  @Prop()
+  entireUpdateTag?: string;
 }
 
 export const DriveItemScheme = SchemaFactory.createForClass(DriveItem);
