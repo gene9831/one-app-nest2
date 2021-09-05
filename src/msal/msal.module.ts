@@ -1,12 +1,12 @@
 import { DynamicModule, Global, Module, Provider } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { MSAL_OPTIONS } from './constants';
 import { MsalModuleAsyncOptions, MsalOptionsFactory } from './interfaces';
-import { MsalService } from './msal.service';
-import { MsalController } from './msal.controller';
-import { MongooseModule } from '@nestjs/mongoose';
 import { TokenCache, TokenCacheScheme } from './models';
+import { MsalController } from './msal.controller';
 import { MsalResolver } from './msal.resolver';
-
+import { MsalService } from './msal.service';
+z;
 @Global()
 @Module({
   imports: [

@@ -6,10 +6,10 @@ import { WinstonModule } from 'nest-winston';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigFactory, configurations } from './config';
+import { GqlScalarsModule } from './gql-scalars/gql-scalar.module';
 import { MsGraphModule } from './ms-graph/ms-graph.module';
 import { MsalModule } from './msal/msal.module';
 import { TestModule } from './test/test.module';
-import { GqlScalarsModule } from './gql-scalars/gql-scalar.module';
 
 @Module({
   imports: [

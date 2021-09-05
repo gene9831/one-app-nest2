@@ -1,19 +1,18 @@
-import {
-  AuthenticationResult,
-  AuthorizationCodeRequest,
-  AuthorizationUrlRequest,
-  ConfidentialClientApplication,
-  LogLevel,
-  NodeAuthOptions,
-  SilentFlowRequest,
-  TokenCacheContext,
-} from '@azure/msal-node';
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { MSAL_OPTIONS } from './constants';
 import { MsalModuleOptions } from './interfaces';
 import { TokenCache } from './models';
+import {
+  AuthenticationResult,
+  AuthorizationCodeRequest,
+  AuthorizationUrlRequest,
+  ConfidentialClientApplication,
+  NodeAuthOptions,
+  SilentFlowRequest,
+  TokenCacheContext,
+} from '@azure/msal-node';
 
 @Injectable()
 export class MsalService extends ConfidentialClientApplication {

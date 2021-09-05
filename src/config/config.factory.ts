@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GqlModuleOptions, GqlOptionsFactory } from '@nestjs/graphql';
+import { join } from 'path';
+import { MsalModuleOptions, MsalOptionsFactory } from 'src/msal/interfaces';
+import * as winston from 'winston';
 import {
   MongooseModuleOptions,
   MongooseOptionsFactory,
@@ -9,9 +12,6 @@ import {
   WinstonModuleOptions,
   WinstonModuleOptionsFactory,
 } from 'nest-winston';
-import { join } from 'path';
-import { MsalModuleOptions, MsalOptionsFactory } from 'src/msal/interfaces';
-import * as winston from 'winston';
 
 @Injectable()
 export class ConfigFactory

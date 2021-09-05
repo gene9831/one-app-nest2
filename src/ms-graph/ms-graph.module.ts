@@ -3,6 +3,8 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { DriveApisService } from './drive-apis/drive-apis.service';
 import { DrivesResolver } from './drives/drives.resolver';
 import { DrivesService } from './drives/drives.service';
+import { UpdateTaskResolver } from './update-task/update-task.resolver';
+import { UpdateTaskService } from './update-task/update-task.service';
 import {
   Drive,
   DriveItem,
@@ -11,8 +13,6 @@ import {
   UpdateTask,
   UpdateTaskScheme,
 } from './models';
-import { UpdateTaskService } from './update-task/update-task.service';
-import { UpdateTaskResolver } from './update-task/update-task.resolver';
 
 @Module({
   imports: [
@@ -32,6 +32,12 @@ import { UpdateTaskResolver } from './update-task/update-task.resolver';
     ]),
     HttpModule,
   ],
-  providers: [DriveApisService, DrivesService, DrivesResolver, UpdateTaskService, UpdateTaskResolver],
+  providers: [
+    DriveApisService,
+    DrivesService,
+    DrivesResolver,
+    UpdateTaskService,
+    UpdateTaskResolver,
+  ],
 })
 export class MsGraphModule {}
