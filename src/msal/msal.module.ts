@@ -6,7 +6,7 @@ import { TokenCache, TokenCacheScheme } from './models';
 import { MsalController } from './msal.controller';
 import { MsalResolver } from './msal.resolver';
 import { MsalService } from './msal.service';
-z;
+
 @Global()
 @Module({
   imports: [
