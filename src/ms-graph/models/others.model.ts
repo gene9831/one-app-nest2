@@ -102,6 +102,7 @@ export class Quota {
 }
 
 export class Shared {
+  // ! 子文档里面 required 无效，懒得改了
   @Prop({ required: true })
   owner: IdentitySet;
 
@@ -113,4 +114,17 @@ export class Shared {
 
   @Prop({ required: true })
   sharedDateTime: Date;
+}
+
+export class SharePermission {
+  id: string;
+  roles: string[];
+  expirationDateTime?: string;
+  hasPassword: boolean;
+  link: {
+    scope: string;
+    type: string;
+    webUrl: string;
+    preventsDownload: boolean;
+  };
 }

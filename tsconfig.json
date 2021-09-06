@@ -1,16 +1,26 @@
 {
+  // https://jkchao.github.io/typescript-book-chinese/project/compilationContext.html#编译选项
   "compilerOptions": {
+    // 基本选项
+    "target": "es2017",
     "module": "commonjs",
     "declaration": true,
-    "removeComments": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
-    "target": "es2017",
     "sourceMap": true,
     "outDir": "./dist",
+    "removeComments": true,
+
+    // 严格的类型检查选项
+    "strictNullChecks": false,
+
+    // 模块解析选项
+    "allowSyntheticDefaultImports": true,
     "baseUrl": "./",
+
     "incremental": true,
-    "skipLibCheck": true // https://github.com/nestjs/graphql/issues/1621
+    "skipLibCheck": true, // https://github.com/nestjs/graphql/issues/1621
+
+    // 其他选项
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true
   }
 }

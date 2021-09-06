@@ -4,7 +4,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MsalService } from 'src/msal/msal.service';
-import { Pagination } from '../../args';
 import { DriveApisService } from '../drive-apis/drive-apis.service';
 import { Drive, DriveItem, UpdateTask } from '../models';
 
@@ -21,11 +20,11 @@ export class DrivesService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger,
   ) {}
 
-  async findDrives(): Promise<Drive[]> {
+  async findMany(): Promise<Drive[]> {
     return await this.driveModel.find().exec();
   }
 
-  async updateDrives(localAccountIds?: string | string[], entire = false) {
+  async updateMany(localAccountIds?: string | string[], entire = false) {
     const tokenCache = this.msalService.getTokenCache();
 
     const accounts = new Array<AccountInfo>();
@@ -47,7 +46,7 @@ export class DrivesService {
     return updateTaskId;
   }
 
-  async remove(localAccountId: string) {
+  async deleteOne(localAccountId: string) {
     const drive = await this.driveModel
       .findOne({
         'owner.user.id': localAccountId,
@@ -68,51 +67,6 @@ export class DrivesService {
     await drive.remove();
 
     return true;
-  }
-
-  async listDriveItems(parentReferenceId: string, pagination?: Pagination) {
-    return await this.driveItemModel
-      .find({ 'parentReference.id': parentReferenceId }, null, {
-        skip: pagination.skip,
-        limit: pagination.limit,
-        sort: { [pagination.sortKey || 'name']: pagination.order },
-      })
-      .exec();
-  }
-
-  async findDriveItem(id: string) {
-    return await this.driveItemModel.findOne({ id }).exec();
-  }
-
-  async getDriveItemByPath(
-    path: string,
-    parentReferenceId?: string,
-  ): Promise<DriveItem> {
-    // 去掉开头的'/'，然后以 从左至右第一个出现的'/' 为分割符 分割成两个字符串
-    const [name, subPath] = path.replace(/^\/+/, '').split(/(?<=^[^/]+)\//);
-
-    if (!name) {
-      return await this.driveItemModel
-        .findOne({ root: { $exists: true } })
-        .exec();
-    }
-
-    parentReferenceId =
-      parentReferenceId ||
-      (await this.driveItemModel.findOne({ root: { $exists: true } }).exec())
-        .id;
-
-    const driveItems = await this.driveItemModel
-      .find({ 'parentReference.id': parentReferenceId })
-      .exec();
-
-    const driveItem = driveItems.find((driveItem) => driveItem.name === name);
-
-    return driveItem
-      ? subPath
-        ? this.getDriveItemByPath(subPath, driveItem.id)
-        : driveItem
-      : null;
   }
 
   private async createUpdateTask(name = 'updateTask') {

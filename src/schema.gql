@@ -39,6 +39,7 @@ type DriveItem {
   id: String!
   lastModifiedDateTime: DateTime!
   name: String!
+  shareLink: String
   size: Float!
 }
 
@@ -70,6 +71,8 @@ type IdentitySet {
 }
 
 type Mutation {
+  createShareLink(id: String!): String!
+  deleteShareLink(id: String!): String!
   removeAccount(localAccountId: String!): Boolean!
   removeDrive(localAccountId: String!): Boolean!
   updateDrive(entire: Boolean = false, localAccountId: String!): String!
@@ -88,10 +91,9 @@ type Query {
   account(localAccountId: String!): Account!
   accounts: [Account!]!
   authCodeUrl: String!
-  driveItem(id: String!): DriveItem!
+  driveItem(id: String, path: String): DriveItem!
   driveItems(limit: Int = 20, order: Order = ASC, parentReferenceId: String!, skip: Int = 0, sortKey: String): [DriveItem!]!
   drives: [Drive!]!
-  getDriveItemByPath(path: String!): DriveItem!
   updateTask(id: ObjectId!): UpdateTask!
 }
 

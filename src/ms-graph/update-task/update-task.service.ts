@@ -11,6 +11,6 @@ export class UpdateTaskService {
   ) {}
 
   async findOne(_id: any) {
-    return await this.updateTaskModel.findById(_id);
+    return await this.updateTaskModel.findById(_id).exec();
   }
 }

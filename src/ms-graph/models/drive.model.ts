@@ -57,6 +57,9 @@ export class Drive extends Document {
   deltaLink?: string;
 
   @Prop()
+  shareBaseUrl?: string;
+
+  @Prop()
   entireUpdateTag?: string;
 }
 

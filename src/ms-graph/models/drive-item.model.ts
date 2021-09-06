@@ -7,6 +7,7 @@ import {
   IdentitySet,
   ItemReference,
   Shared,
+  SharePermission,
 } from './others.model';
 
 /**
@@ -80,6 +81,7 @@ export class DriveItem extends Document {
   @Prop({ type: MongooseSchema.Types.Mixed })
   root?: Record<string, any>;
 
+  /** 这个属性好像没什么用 */
   @Prop(Shared)
   shared?: Shared;
 
@@ -92,6 +94,12 @@ export class DriveItem extends Document {
 
   @Prop({ required: true })
   webUrl: string;
+
+  @Prop({ type: MongooseSchema.Types.Mixed })
+  sharePermission?: SharePermission;
+
+  @Field({ nullable: true })
+  shareLink?: string;
 
   /**
    * 全量更新的标签。全量更新后标签不是最新标签，则表示这个driveItem数据已失效
