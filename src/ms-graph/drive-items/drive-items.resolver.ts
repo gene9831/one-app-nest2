@@ -1,4 +1,14 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { Pagination } from 'src/args';
+import { Roles } from 'src/decorators';
+import { Role } from 'src/enums';
+import { AuthJwtGuard } from 'src/guards';
+import { DriveItem } from '../models';
+import { DriveItemsService } from './drive-items.service';
+import {
+  BadRequestException,
+  NotFoundException,
+  UseGuards,
+} from '@nestjs/common';
 import {
   Args,
   Mutation,
@@ -7,11 +17,9 @@ import {
   ResolveField,
   Resolver,
 } from '@nestjs/graphql';
-import { Pagination } from 'src/args';
-import { DriveItem } from '../models';
-import { DriveItemsService } from './drive-items.service';
 
 @Resolver(() => DriveItem)
+@UseGuards(AuthJwtGuard)
 export class DriveItemsResolver {
   constructor(private readonly driveItemsService: DriveItemsService) {}
 
@@ -52,7 +60,8 @@ export class DriveItemsResolver {
     return await this.driveItemsService.getShareLink(parent);
   }
 
-  @Mutation(() => String)
+  @Mutation(() => String, { description: `Roles: ${Role.Admin}` })
+  @Roles(Role.Admin)
   async createShareLink(@Args('id') id: string) {
     const shareLink = await this.driveItemsService.createShareLink(id);
 
@@ -63,7 +72,8 @@ export class DriveItemsResolver {
     return shareLink;
   }
 
-  @Mutation(() => String)
+  @Mutation(() => String, { description: `Roles: ${Role.Admin}` })
+  @Roles(Role.Admin)
   async deleteShareLink(@Args('id') id: string) {
     return Boolean(await this.driveItemsService.deleteSharePerm(id));
   }

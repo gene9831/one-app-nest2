@@ -1,16 +1,20 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
+import { GqlFieldRoles } from 'src/decorators';
+import { Role } from 'src/enums';
 import { IdentitySet, Quota } from './others.model';
 
 /**
  * https://docs.microsoft.com/en-us/graph/api/resources/drive?view=graph-rest-1.0#properties
  */
 @Schema({ timestamps: true })
-@ObjectType()
+@ObjectType({ description: `Roles: ${Role.Admin}` })
+@GqlFieldRoles(Role.Admin)
 export class Drive extends Document {
   @Prop({ required: true })
-  @Field()
+  @Field({ description: `Roles: ${Role.Guest}` })
+  @GqlFieldRoles(Role.Guest)
   id: string;
 
   @Prop({ required: true, type: IdentitySet })

@@ -11,16 +11,24 @@ type Account {
   username: String!
 }
 
+type AuthResult {
+  accessToken: String!
+  expiresAt: Float!
+}
+
 """
 A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
 """
 scalar DateTime
 
+"""Roles: admin"""
 type Drive {
   createdBy: IdentitySet!
   createdDateTime: DateTime!
   description: String!
   driveType: String!
+
+  """Roles: guest"""
   id: String!
   lastModifiedBy: IdentitySet!
   lastModifiedDateTime: DateTime!
@@ -71,11 +79,26 @@ type IdentitySet {
 }
 
 type Mutation {
+  """Roles: user"""
+  auth: AuthResult!
+
+  """Roles: admin"""
   createShareLink(id: String!): String!
+
+  """Roles: admin"""
   deleteShareLink(id: String!): String!
+  login(password: String!, username: String!): AuthResult!
+
+  """Roles: admin"""
   removeAccount(localAccountId: String!): Boolean!
+
+  """Roles: admin"""
   removeDrive(localAccountId: String!): Boolean!
+
+  """Roles: admin"""
   updateDrive(entire: Boolean = false, localAccountId: String!): String!
+
+  """Roles: admin"""
   updateDrives(entire: Boolean = false, localAccountIds: [String!]): String!
 }
 
@@ -88,12 +111,21 @@ enum Order {
 }
 
 type Query {
+  """Roles: admin"""
   account(localAccountId: String!): Account!
+
+  """Roles: admin"""
   accounts: [Account!]!
+
+  """Roles: admin"""
   authCodeUrl: String!
   driveItem(id: String, path: String): DriveItem!
   driveItems(limit: Int = 20, order: Order = ASC, parentReferenceId: String!, skip: Int = 0, sortKey: String): [DriveItem!]!
+
+  """Roles: admin | guest"""
   drives: [Drive!]!
+
+  """Roles: admin"""
   updateTask(id: ObjectId!): UpdateTask!
 }
 

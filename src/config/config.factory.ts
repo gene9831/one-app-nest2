@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GqlModuleOptions, GqlOptionsFactory } from '@nestjs/graphql';
+import { JwtModuleOptions, JwtOptionsFactory } from '@nestjs/jwt';
 import { join } from 'path';
+import { checkRoleMiddleware } from 'src/middlewares';
 import { MsalModuleOptions, MsalOptionsFactory } from 'src/msal/interfaces';
 import * as winston from 'winston';
 import {
@@ -16,12 +18,20 @@ import {
 @Injectable()
 export class ConfigFactory
   implements
+    JwtOptionsFactory,
     GqlOptionsFactory,
     MongooseOptionsFactory,
     MsalOptionsFactory,
     WinstonModuleOptionsFactory
 {
   constructor(private readonly configService: ConfigService) {}
+
+  createJwtOptions(): JwtModuleOptions | Promise<JwtModuleOptions> {
+    const jwt = this.configService.get<JwtModuleOptions>('jwt');
+    jwt.signOptions = { expiresIn: '1h', ...jwt.signOptions };
+
+    return jwt;
+  }
 
   createGqlOptions(): GqlModuleOptions | Promise<GqlModuleOptions> {
     const env = this.configService.get<string>('env');
@@ -30,6 +40,9 @@ export class ConfigFactory
       playground: env === 'development',
       autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
       sortSchema: true,
+      buildSchemaOptions: {
+        fieldMiddleware: [checkRoleMiddleware],
+      },
     };
   }
 

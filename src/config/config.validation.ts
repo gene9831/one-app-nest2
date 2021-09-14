@@ -13,6 +13,13 @@ export const validate = (config: Record<string, unknown>) => {
     env: Joi.string()
       .valid('development', 'production', 'test', 'provision')
       .default('development'),
+    jwt: Joi.object({
+      signOptions: Joi.object({
+        algorithm: Joi.string(),
+        expiresIn: Joi.alternatives().try(Joi.string(), Joi.number()),
+      }),
+      secret: Joi.string().required(),
+    }),
     logfiles: Joi.array()
       .items(
         Joi.object({
