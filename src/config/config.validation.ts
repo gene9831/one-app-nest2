@@ -19,7 +19,7 @@ export const validate = (config: Record<string, unknown>) => {
         expiresIn: Joi.alternatives().try(Joi.string(), Joi.number()),
       }),
       secret: Joi.string().required(),
-    }),
+    }).required(),
     logfiles: Joi.array()
       .items(
         Joi.object({

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as dateFormat from 'dateformat';
 import { Model } from 'mongoose';
+import { MsGraphExceptopn } from 'src/exceptions/ms-graph-exception';
 import { MsalService } from 'src/msal/msal.service';
 import { Pagination } from '../../args';
 import { DriveApisService } from '../drive-apis/drive-apis.service';
@@ -20,9 +21,9 @@ export class DriveItemsService {
   async findMany(parentReferenceId: string, pagination?: Pagination) {
     return await this.driveItemModel
       .find({ 'parentReference.id': parentReferenceId }, null, {
-        skip: pagination.skip,
-        limit: pagination.limit,
-        sort: { [pagination.sortKey || 'name']: pagination.order },
+        skip: pagination?.skip,
+        limit: Math.min(pagination?.limit || 20, 25),
+        sort: { [pagination?.sortKey || 'name']: pagination?.order },
       })
       .exec();
   }
@@ -34,7 +35,7 @@ export class DriveItemsService {
   async findOneByPath(
     path: string,
     parentReferenceId?: string,
-  ): Promise<DriveItem> {
+  ): Promise<DriveItem | null> {
     // 去掉开头的'/'，然后以 从左至右第一个出现的'/' 为分割符 分割成两个字符串
     const [name, subPath] = path.replace(/^\/+/, '').split(/(?<=^[^/]+)\//);
 
@@ -47,7 +48,7 @@ export class DriveItemsService {
     parentReferenceId =
       parentReferenceId ||
       (await this.driveItemModel.findOne({ root: { $exists: true } }).exec())
-        .id;
+        ?.id;
 
     const driveItems = await this.driveItemModel
       .find({ 'parentReference.id': parentReferenceId })
@@ -84,26 +85,29 @@ export class DriveItemsService {
 
   async createShareLink(id: string) {
     const driveItem = await this.findDriveItemWithDrive(id);
+    const localId = driveItem?.drive.owner?.user?.id;
 
     // 限制只有文件才能创建共享连接
     if (!driveItem?.file) {
       return null;
     }
 
+    if (!localId) {
+      throw new MsGraphExceptopn(
+        `AccountLocalId of driveItem[${driveItem?.id}] is null`,
+      );
+    }
+
     const shareBaseUrl = await this.getOrCreateShareBaseUrl(driveItem);
 
-    const shareLink = this.getShareLink(driveItem, shareBaseUrl);
+    const shareLink = await this.getShareLink(driveItem, shareBaseUrl);
     if (shareLink) {
       return shareLink;
     }
 
-    const accessToken = (
-      await this.msalService.acquireTokenSilent({
-        account: await this.msalService
-          .getTokenCache()
-          .getAccountByLocalId(driveItem.drive.owner.user.id),
-      })
-    ).accessToken;
+    const accessToken = await this.msalService.acquireAccessTokenByLocalId(
+      localId,
+    );
     const now = new Date();
     now.setDate(now.getDate() + 7);
     const expirationDateTime = dateFormat(now, 'isoUtcDateTime');
@@ -131,29 +135,29 @@ export class DriveItemsService {
 
   async deleteSharePerm(id: string) {
     const driveItem = await this.findDriveItemWithDrive(id);
+    const sharePermId = driveItem?.sharePermission?.id;
+    const localId = driveItem?.drive.owner?.user?.id;
 
-    if (!driveItem || !driveItem.sharePermission?.id) {
+    if (!driveItem || !sharePermId) {
       return null;
     }
 
-    const accessToken = (
-      await this.msalService.acquireTokenSilent({
-        account: await this.msalService
-          .getTokenCache()
-          .getAccountByLocalId(driveItem.drive.owner.user.id),
-      })
-    ).accessToken;
-
-    // 204 no content
-    await this.driveApisService.deletePerm(
-      accessToken,
-      id,
-      driveItem.sharePermission.id,
-    );
+    if (!localId) {
+      throw new MsGraphExceptopn(
+        `AccountLocalId of driveItem[${driveItem?.id}] is null`,
+      );
+    }
 
     await this.driveItemModel
-      .updateOne({ id }, { $set: { sharePermission: null } })
+      .updateOne({ id }, { $unset: { sharePermission: '' } })
       .exec();
+
+    const accessToken = await this.msalService.acquireAccessTokenByLocalId(
+      localId,
+    );
+
+    // 204 no content
+    await this.driveApisService.deletePerm(accessToken, id, sharePermId);
 
     return true;
   }
@@ -172,20 +176,23 @@ export class DriveItemsService {
     const driveId = driveItem.parentReference.driveId;
 
     const drive = await this.driveModel.findOne({ id: driveId }).exec();
+    const localId = drive?.owner?.user?.id;
 
-    let shareBaseUrl = drive.shareBaseUrl;
+    if (!localId) {
+      throw new MsGraphExceptopn(
+        `AccountLocalId of drive[${drive?.id}] is null`,
+      );
+    }
+
+    let shareBaseUrl = drive?.shareBaseUrl;
 
     if (shareBaseUrl) {
       return shareBaseUrl;
     }
 
-    const accessToken = (
-      await this.msalService.acquireTokenSilent({
-        account: await this.msalService
-          .getTokenCache()
-          .getAccountByLocalId(drive.owner.user.id),
-      })
-    ).accessToken;
+    const accessToken = await this.msalService.acquireAccessTokenByLocalId(
+      localId,
+    );
 
     const contentUrl = await this.driveApisService.contentUrl(
       accessToken,

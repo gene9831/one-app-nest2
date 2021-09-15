@@ -89,11 +89,14 @@ export class DriveApisService {
       return res.headers.location as string;
     } catch (err) {
       if (err?.isAxiosError) {
-        const _err = <AxiosError>err;
-        const statusCode = _err.response.status;
+        const axiosError: AxiosError = err;
 
-        if (statusCode >= 300 && statusCode < 400) {
-          return _err.response.headers.location as string;
+        if (axiosError.response) {
+          const statusCode = axiosError.response.status;
+
+          if (statusCode >= 300 && statusCode < 400) {
+            return axiosError.response.headers.location as string;
+          }
         }
       }
       throw err;
@@ -125,11 +128,18 @@ export class DriveApisService {
         .toPromise();
     } catch (err) {
       if (err?.isAxiosError) {
-        const _err = <AxiosError>err;
-        const statusCode = _err.response.status;
+        const axiosError: AxiosError = err;
 
-        if (statusCode >= 400 && statusCode < 500) {
-          this.logger.error(_err.response.data.error, null, 'DriveApisService');
+        if (axiosError.response) {
+          const statusCode = axiosError.response.status;
+
+          if (statusCode >= 400 && statusCode < 500) {
+            this.logger.error(
+              axiosError.response.data.error,
+              void 0,
+              'DriveApisService',
+            );
+          }
         }
       }
       throw err;

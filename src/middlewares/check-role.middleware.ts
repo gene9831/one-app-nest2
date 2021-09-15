@@ -12,8 +12,8 @@ export const checkRoleMiddleware: FieldMiddleware = async (
   // 使用concat是因为roles可能为undefined
   const rolesSet = new Set<string>(
     []
-      .concat(info.parentType.extensions.roles)
-      .concat(info.parentType.getFields()[info.fieldName].extensions.roles)
+      .concat(info.parentType.extensions?.roles)
+      .concat(info.parentType.getFields()[info.fieldName].extensions?.roles)
       .filter((role) => Boolean(role)),
   );
 

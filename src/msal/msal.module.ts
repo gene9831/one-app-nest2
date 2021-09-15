@@ -35,13 +35,17 @@ export class MsalModule {
     }
 
     // for useClass
-    return [
-      this.createAsycOptionsProvider(options),
-      {
-        provide: options.useClass,
-        useClass: options.useClass,
-      },
-    ];
+    if (options.useClass) {
+      return [
+        this.createAsycOptionsProvider(options),
+        {
+          provide: options.useClass,
+          useClass: options.useClass,
+        },
+      ];
+    }
+
+    return [];
   }
 
   private static createAsycOptionsProvider(
@@ -61,7 +65,11 @@ export class MsalModule {
       provide: MSAL_OPTIONS,
       useFactory: async (optionsFactory: MsalOptionsFactory) =>
         await optionsFactory.createMsalOptions(),
-      inject: [options.useExisting || options.useClass],
+      inject: options.useExisting
+        ? [options.useExisting]
+        : options.useClass
+        ? [options.useClass]
+        : void 0,
     };
   }
 }

@@ -1,9 +1,6 @@
-import { registerAs } from '@nestjs/config';
 import { readFileSync } from 'fs';
 import * as yaml from 'js-yaml';
-import { utilities, WinstonModuleOptions } from 'nest-winston';
 import { dirname, join } from 'path';
-import * as winston from 'winston';
 import { validate } from './config.validation';
 
 const YAML_CONFIG_FILENAME = 'config.yaml';
@@ -17,15 +14,4 @@ const yamlConfig = () => {
   );
 };
 
-const winstonConfig = registerAs(
-  'winston',
-  (): WinstonModuleOptions => ({
-    format: winston.format.combine(
-      winston.format.timestamp({ format: 'YYYY/MM/DD HH:mm:ss' }),
-      utilities.format.nestLike('Nest'),
-    ),
-    transports: [new winston.transports.Console()],
-  }),
-);
-
-export const configurations = [yamlConfig, winstonConfig];
+export const configurations = [yamlConfig];

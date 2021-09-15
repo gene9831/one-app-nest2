@@ -10,7 +10,7 @@
     "removeComments": true,
 
     // 严格的类型检查选项
-    "strictNullChecks": false,
+    "strictNullChecks": true,
 
     // 模块解析选项
     "allowSyntheticDefaultImports": true,

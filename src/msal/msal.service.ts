@@ -1,11 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { MsalException } from 'src/exceptions';
 import { MSAL_OPTIONS } from './constants';
 import { MsalModuleOptions } from './interfaces';
 import { TokenCache } from './models';
 import {
-  AuthenticationResult,
   AuthorizationCodeRequest,
   AuthorizationUrlRequest,
   ConfidentialClientApplication,
@@ -67,7 +67,7 @@ export class MsalService extends ConfidentialClientApplication {
       redirectUri?: string;
       scopes?: Array<string>;
     },
-  ): Promise<string> {
+  ) {
     return super.getAuthCodeUrl({
       redirectUri: this.options.redirectUri,
       scopes: this.options.scopes,
@@ -80,7 +80,7 @@ export class MsalService extends ConfidentialClientApplication {
       redirectUri?: string;
       scopes?: Array<string>;
     },
-  ): Promise<AuthenticationResult | null> {
+  ) {
     return await super.acquireTokenByCode({
       redirectUri: this.options.redirectUri,
       scopes: this.options.scopes,
@@ -92,10 +92,41 @@ export class MsalService extends ConfidentialClientApplication {
     request: Omit<SilentFlowRequest, 'scopes'> & {
       scopes?: Array<string>;
     },
-  ): Promise<AuthenticationResult | null> {
+  ) {
     return await super.acquireTokenSilent({
       scopes: this.options.scopes,
       ...request,
     });
+  }
+
+  async acquireAccessTokenSilent(
+    request: Omit<SilentFlowRequest, 'scopes'> & {
+      scopes?: Array<string>;
+    },
+  ) {
+    const accessToken = (await this.acquireTokenSilent(request))?.accessToken;
+
+    if (!accessToken) {
+      throw new MsalException('Msal acquireTokenSilent error');
+    }
+
+    return accessToken;
+  }
+
+  async acquireAccessTokenByLocalId(localId: string) {
+    const account = await this.getTokenCache().getAccountByLocalId(localId);
+
+    if (!account) {
+      throw new MsalException('Msal getAccountByLocalId error');
+    }
+
+    const accessToken = (await this.acquireTokenSilent({ account }))
+      ?.accessToken;
+
+    if (!accessToken) {
+      throw new MsalException('Msal acquireTokenSilent error');
+    }
+
+    return accessToken;
   }
 }

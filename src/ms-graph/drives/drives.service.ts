@@ -31,10 +31,12 @@ export class DrivesService {
 
     if (Array.isArray(localAccountIds)) {
       for (const localAccountId of localAccountIds) {
-        accounts.push(await tokenCache.getAccountByLocalId(localAccountId));
+        const account = await tokenCache.getAccountByLocalId(localAccountId);
+        account && accounts.push(account);
       }
     } else if (typeof localAccountIds === 'string') {
-      accounts.push(await tokenCache.getAccountByLocalId(localAccountIds));
+      const account = await tokenCache.getAccountByLocalId(localAccountIds);
+      account && accounts.push(account);
     } else {
       accounts.push(...(await tokenCache.getAllAccounts()));
     }
@@ -101,8 +103,9 @@ export class DrivesService {
   }
 
   private async updateDriveAsync(account: AccountInfo, entire = false) {
-    const accessToken = (await this.msalService.acquireTokenSilent({ account }))
-      .accessToken;
+    const accessToken = await this.msalService.acquireAccessTokenSilent({
+      account,
+    });
 
     // TODO 抛出异常待处理
     const newDrive = (await this.driveApisService.drive(accessToken)).data;
@@ -117,8 +120,8 @@ export class DrivesService {
 
     this.logger.log(drive.id, 'updateDrive');
 
-    let nextLink = entire ? null : drive.deltaLink;
-    let deltaLink: string;
+    let nextLink = entire ? void 0 : drive.deltaLink;
+    let deltaLink: string | undefined = void 0;
 
     entire = !Boolean(nextLink) || entire;
     const lastEntireUpdateTag = drive.entireUpdateTag;

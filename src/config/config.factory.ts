@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GqlModuleOptions, GqlOptionsFactory } from '@nestjs/graphql';
 import { JwtModuleOptions, JwtOptionsFactory } from '@nestjs/jwt';
+import { strict as assert } from 'assert';
 import { join } from 'path';
 import { checkRoleMiddleware } from 'src/middlewares';
 import { MsalModuleOptions, MsalOptionsFactory } from 'src/msal/interfaces';
@@ -11,6 +12,7 @@ import {
   MongooseOptionsFactory,
 } from '@nestjs/mongoose';
 import {
+  utilities,
   WinstonModuleOptions,
   WinstonModuleOptionsFactory,
 } from 'nest-winston';
@@ -27,10 +29,11 @@ export class ConfigFactory
   constructor(private readonly configService: ConfigService) {}
 
   createJwtOptions(): JwtModuleOptions | Promise<JwtModuleOptions> {
-    const jwt = this.configService.get<JwtModuleOptions>('jwt');
-    jwt.signOptions = { expiresIn: '1h', ...jwt.signOptions };
+    const jwtOptions = this.configService.get<JwtModuleOptions>('jwt');
+    assert.ok(jwtOptions);
+    jwtOptions.signOptions = { expiresIn: '1h', ...jwtOptions.signOptions };
 
-    return jwt;
+    return jwtOptions;
   }
 
   createGqlOptions(): GqlModuleOptions | Promise<GqlModuleOptions> {
@@ -49,11 +52,15 @@ export class ConfigFactory
   createMongooseOptions():
     | MongooseModuleOptions
     | Promise<MongooseModuleOptions> {
-    return this.configService.get('db.mongo');
+    const mongoOptions = this.configService.get('db.mongo');
+    assert.ok(mongoOptions);
+    return mongoOptions;
   }
 
   createMsalOptions(): MsalModuleOptions | Promise<MsalModuleOptions> {
-    return this.configService.get('msal');
+    const msal = this.configService.get<MsalModuleOptions>('msal');
+    assert.ok(msal);
+    return msal;
   }
 
   createWinstonModuleOptions():
@@ -66,13 +73,16 @@ export class ConfigFactory
         filename: string;
       }>
     >('logfiles');
-    const config = this.configService.get<WinstonModuleOptions>('winston');
-    const transports = Array.isArray(config.transports)
-      ? config.transports || []
-      : [config.transports];
+
+    assert.ok(logfiles);
+
     return {
-      ...config,
-      transports: transports.concat(
+      format: winston.format.combine(
+        winston.format.timestamp({ format: 'YYYY/MM/DD HH:mm:ss' }),
+        utilities.format.nestLike('Nest'),
+      ),
+      transports: new Array<winston.transport>().concat(
+        new winston.transports.Console(),
         logfiles.map(
           ({ level, dirname, filename }) =>
             new winston.transports.File({

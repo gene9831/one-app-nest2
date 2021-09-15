@@ -40,13 +40,14 @@ export class DriveItemsResolver {
       throw new BadRequestException('At least one non-empty parameter');
     }
 
-    let driveItem: DriveItem;
-
-    if (id) {
-      driveItem = await this.driveItemsService.findOneById(id);
-    } else {
-      driveItem = await this.driveItemsService.findOneByPath(path);
-    }
+    const driveItem = await (async () => {
+      if (id) {
+        return await this.driveItemsService.findOneById(id);
+      } else if (path) {
+        return await this.driveItemsService.findOneByPath(path);
+      }
+      return null;
+    })();
 
     if (!driveItem) {
       throw new NotFoundException();
