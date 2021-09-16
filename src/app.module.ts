@@ -11,7 +11,6 @@ import { GqlScalarsModule } from './gql-scalars/gql-scalar.module';
 import { MsGraphModule } from './ms-graph/ms-graph.module';
 import { MsalModule } from './msal/msal.module';
 import { UsersModule } from './users/users.module';
-// import { TestModule } from './test/test.module';
 
 @Module({
   imports: [
@@ -32,7 +31,6 @@ import { UsersModule } from './users/users.module';
     MsalModule.registerAsync({
       useClass: ConfigFactory,
     }),
-    // TestModule,
     MsGraphModule,
     AuthModule,
     UsersModule,

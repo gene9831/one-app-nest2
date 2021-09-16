@@ -5,9 +5,7 @@ export enum Order {
   DESC = -1,
 }
 
-registerEnumType(Order, {
-  name: 'Order',
-});
+registerEnumType(Order, { name: 'Order' });
 
 @ArgsType()
 export class Pagination {

@@ -6,14 +6,13 @@ import {
   Folder,
   IdentitySet,
   ItemReference,
-  Shared,
   SharePermission,
 } from './others.model';
 
 /**
  * https://docs.microsoft.com/en-us/graph/api/resources/driveitem?view=graph-rest-1.0#properties
  */
-@Schema()
+@Schema({ collection: 'drive_items' })
 @ObjectType()
 export class DriveItem extends Document {
   @Prop({ required: true })
@@ -26,9 +25,8 @@ export class DriveItem extends Document {
   // @Prop()
   // content?: any;
 
-  @Prop({ type: IdentitySet, required: true })
-  @Field(() => IdentitySet)
-  createdBy: IdentitySet;
+  @Prop({ type: IdentitySet })
+  createdBy?: IdentitySet;
 
   @Prop({ required: true })
   @Field()
@@ -40,9 +38,9 @@ export class DriveItem extends Document {
   @Prop(raw({ state: { type: String } }))
   deleted?: { state: string };
 
-  @Prop({ default: '' })
-  @Field()
-  description: string;
+  @Prop()
+  @Field({ nullable: true })
+  description?: string;
 
   @Prop()
   eTag?: string;
@@ -61,8 +59,8 @@ export class DriveItem extends Document {
   @Prop(raw({ height: { type: Number }, width: { type: Number } }))
   image?: { height: number; width: number };
 
-  @Prop({ type: IdentitySet, required: true })
-  lastModifiedBy: IdentitySet;
+  @Prop({ type: IdentitySet })
+  lastModifiedBy?: IdentitySet;
 
   @Prop({ required: true })
   @Field()
@@ -82,8 +80,8 @@ export class DriveItem extends Document {
   root?: Record<string, any>;
 
   /** 这个属性好像没什么用 */
-  @Prop(Shared)
-  shared?: Shared;
+  @Prop({ type: MongooseSchema.Types.Mixed })
+  shared?: Record<string, any>;
 
   @Prop({ required: true })
   @Field()
@@ -95,7 +93,7 @@ export class DriveItem extends Document {
   @Prop({ required: true })
   webUrl: string;
 
-  @Prop({ type: MongooseSchema.Types.Mixed })
+  @Prop(SharePermission)
   sharePermission?: SharePermission;
 
   @Field({ nullable: true })

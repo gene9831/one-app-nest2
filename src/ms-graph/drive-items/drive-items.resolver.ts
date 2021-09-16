@@ -25,10 +25,30 @@ export class DriveItemsResolver {
 
   @Query(() => [DriveItem])
   async driveItems(
-    @Args('parentReferenceId') parentReferenceId: string,
+    @Args('parentId', { nullable: true }) parentId?: string,
+    @Args('path', { nullable: true }) path?: string,
     @Args({ type: () => Pagination, nullable: true }) pagination?: Pagination,
   ): Promise<DriveItem[]> {
-    return await this.driveItemsService.findMany(parentReferenceId, pagination);
+    if (!Boolean(parentId || path)) {
+      throw new BadRequestException(
+        'At least one non-empty parameter between parentReferenceId and path',
+      );
+    }
+
+    const driveItems = await (async () => {
+      if (parentId) {
+        return await this.driveItemsService.findMany(parentId, pagination);
+      } else if (path) {
+        return await this.driveItemsService.findManyByPath(path, pagination);
+      }
+      return null;
+    })();
+
+    if (!driveItems) {
+      throw new NotFoundException();
+    }
+
+    return driveItems;
   }
 
   @Query(() => DriveItem)
@@ -37,7 +57,9 @@ export class DriveItemsResolver {
     @Args('path', { nullable: true }) path?: string,
   ) {
     if (!Boolean(id || path)) {
-      throw new BadRequestException('At least one non-empty parameter');
+      throw new BadRequestException(
+        'At least one non-empty parameter between id and path',
+      );
     }
 
     const driveItem = await (async () => {

@@ -1,7 +1,7 @@
 import { AccountInfo } from '@azure/msal-node';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MsalService } from 'src/msal/msal.service';
 import { DriveApisService } from '../drive-apis/drive-apis.service';
@@ -41,9 +41,11 @@ export class DrivesService {
       accounts.push(...(await tokenCache.getAllAccounts()));
     }
 
-    const updateTaskId = await this.createUpdateTask();
+    const updateTaskId = (
+      await this.updateTaskModel.create({ name: 'updateTask' })
+    )._id.toHexString();
 
-    this.updateDrivesAsync(accounts, entire, updateTaskId);
+    this.updateDrivesAsync(accounts, updateTaskId, entire);
 
     return updateTaskId;
   }
@@ -71,35 +73,38 @@ export class DrivesService {
     return true;
   }
 
-  private async createUpdateTask(name = 'updateTask') {
-    const updateResult = await this.updateTaskModel
-      .updateOne({ _id: new Types.ObjectId() }, { name }, { upsert: true })
-      .exec();
-
-    return updateResult.upsertedId.toHexString();
-  }
-
   private async updateDrivesAsync(
     accounts: AccountInfo[],
+    updateTaskId: string,
     entire = false,
-    updateTaskId?: string,
   ) {
-    for (const [i, account] of accounts.entries()) {
-      await this.updateDriveAsync(account, entire);
+    this.logger.log(`[${updateTaskId}] starting`, 'updateTask');
 
-      updateTaskId &&
-        (await this.updateTaskModel
+    try {
+      for (const [i, account] of accounts.entries()) {
+        await this.updateDriveAsync(account, entire);
+
+        await this.updateTaskModel
           .updateOne(
             { _id: updateTaskId },
             { progress: ((i + 1) / accounts.length) * 100 },
           )
-          .exec());
-    }
+          .exec();
+      }
 
-    updateTaskId &&
-      (await this.updateTaskModel
-        .updateOne({ _id: updateTaskId }, { completed: true })
-        .exec());
+      await this.updateTaskModel
+        .updateOne(
+          { _id: updateTaskId },
+          { completed: UpdateTask.Completed.SUCCESS },
+        )
+        .exec();
+
+      this.logger.log(`[${updateTaskId}] succeed`, 'updateTask');
+    } catch (err) {
+      this.logger.log(`[${updateTaskId}] failed`, 'updateTask');
+      this.logger.error(err);
+      throw err;
+    }
   }
 
   private async updateDriveAsync(account: AccountInfo, entire = false) {
@@ -110,13 +115,13 @@ export class DrivesService {
     // TODO 抛出异常待处理
     const newDrive = (await this.driveApisService.drive(accessToken)).data;
 
-    const drive = await this.driveModel
-      .findOneAndUpdate(
-        { id: newDrive.id },
-        { $set: newDrive },
-        { upsert: true, new: true },
-      )
+    let drive = await this.driveModel
+      .findOneAndUpdate({ id: newDrive.id }, { $set: newDrive })
       .exec();
+
+    if (!drive) {
+      drive = await this.driveModel.create(newDrive);
+    }
 
     this.logger.log(drive.id, 'updateDrive');
 
@@ -133,48 +138,47 @@ export class DrivesService {
       nextLink = res.data['@odata.nextLink'];
       deltaLink = res.data['@odata.deltaLink'];
 
-      const writes = res.data.value
-        .filter((driveItem) => {
-          if (driveItem['@odata.type'] != '#microsoft.graph.driveItem') {
-            this.logger.warn(
-              { message: 'Wrong @odata.type', ...driveItem },
-              'updateItems',
-            );
-            return false;
+      const writeResult = {
+        nInserted: 0,
+        nUpdated: 0,
+        nDeleted: 0,
+      };
+
+      for (const driveItem of res.data.value) {
+        if (driveItem['@odata.type'] != '#microsoft.graph.driveItem') {
+          this.logger.warn(
+            { message: 'Wrong @odata.type', ...driveItem },
+            'updateItems',
+          );
+          continue;
+        }
+
+        if (driveItem.deleted) {
+          const deleteResult = await this.driveItemModel
+            .deleteOne({ id: driveItem.id })
+            .exec();
+          writeResult.nDeleted += deleteResult.deletedCount;
+        } else {
+          const item = await this.driveItemModel.findOneAndUpdate(
+            { id: driveItem.id },
+            {
+              $set: {
+                ...driveItem,
+                ...(entire ? { entireUpdateTag: newEntireUpdateTag } : {}),
+              },
+            },
+          );
+
+          if (!item) {
+            await this.driveItemModel.create(driveItem);
+            writeResult.nInserted += 1;
+          } else {
+            writeResult.nUpdated += 1;
           }
-          return true;
-        })
-        .map((driveItem) => {
-          // console.log(driveItem);
-          return driveItem.deleted
-            ? { deleteOne: { filter: { id: driveItem.id } } }
-            : {
-                updateOne: {
-                  filter: { id: driveItem.id },
-                  update: {
-                    $set: {
-                      ...driveItem,
-                      ...(entire
-                        ? { entireUpdateTag: newEntireUpdateTag }
-                        : {}),
-                    },
-                  },
-                  upsert: true,
-                },
-              };
-        });
+        }
+      }
 
-      const bulkWriteResult = await this.driveItemModel.bulkWrite(writes);
-
-      const pickedRes = this._pick(bulkWriteResult, [
-        'nInserted',
-        'nUpserted',
-        'nMatched',
-        'nModified',
-        'nRemoved',
-      ]);
-
-      this.logger.log({ message: drive.id, ...pickedRes }, 'updateItems');
+      this.logger.log({ message: drive.id, ...writeResult }, 'updateItems');
     }
 
     // 删除无效数据
@@ -200,12 +204,5 @@ export class DrivesService {
         },
       )
       .exec();
-  }
-
-  private _pick<T>(obj: T, keys: (keyof T)[]) {
-    return keys.reduce((res, key) => {
-      res[key] = obj[key];
-      return res;
-    }, <Partial<T>>{});
   }
 }

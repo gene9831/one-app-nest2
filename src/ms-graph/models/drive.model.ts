@@ -3,12 +3,12 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 import { GqlFieldRoles } from 'src/decorators';
 import { Role } from 'src/enums';
-import { IdentitySet, Quota } from './others.model';
+import { AppSettingsOfDrive, IdentitySet, Quota } from './others.model';
 
 /**
  * https://docs.microsoft.com/en-us/graph/api/resources/drive?view=graph-rest-1.0#properties
  */
-@Schema({ timestamps: true })
+@Schema({ collection: 'drives', timestamps: true })
 @ObjectType({ description: `Roles: ${Role.Admin}` })
 @GqlFieldRoles(Role.Admin)
 export class Drive extends Document {
@@ -25,9 +25,9 @@ export class Drive extends Document {
   @Field()
   createdDateTime: Date;
 
-  @Prop({ default: '' }) //! required为true，空字符串（‘’）不会通过验证。用default替代
-  @Field()
-  description: string;
+  @Prop()
+  @Field({ nullable: true })
+  description?: string;
 
   @Prop({ required: true })
   @Field()
@@ -49,9 +49,9 @@ export class Drive extends Document {
   @Field(() => IdentitySet, { nullable: true })
   owner?: IdentitySet;
 
-  @Prop(Quota)
-  @Field(() => Quota, { nullable: true })
-  quota?: Quota;
+  @Prop({ type: Quota, required: true })
+  @Field(() => Quota)
+  quota: Quota;
 
   @Prop({ required: true })
   @Field()
@@ -65,6 +65,10 @@ export class Drive extends Document {
 
   @Prop()
   entireUpdateTag?: string;
+
+  @Prop(AppSettingsOfDrive)
+  @Field(() => AppSettingsOfDrive, { nullable: true })
+  appSettings?: AppSettingsOfDrive;
 }
 
 export const DriveScheme = SchemaFactory.createForClass(Drive);

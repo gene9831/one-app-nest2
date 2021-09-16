@@ -3,6 +3,8 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { DriveApisService } from './drive-apis/drive-apis.service';
 import { DriveItemsResolver } from './drive-items/drive-items.resolver';
 import { DriveItemsService } from './drive-items/drive-items.service';
+import { DriveSettingsResolver } from './drive-settings/drive-settings.resolver';
+import { DriveSettingsService } from './drive-settings/drive-settings.service';
 import { DrivesResolver } from './drives/drives.resolver';
 import { DrivesService } from './drives/drives.service';
 import { UpdateTaskResolver } from './update-task/update-task.resolver';
@@ -42,6 +44,8 @@ import {
     UpdateTaskResolver,
     DriveItemsService,
     DriveItemsResolver,
+    DriveSettingsService,
+    DriveSettingsResolver,
   ],
 })
 export class MsGraphModule {}

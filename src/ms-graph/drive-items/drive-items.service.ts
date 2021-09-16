@@ -6,7 +6,7 @@ import { MsGraphExceptopn } from 'src/exceptions/ms-graph-exception';
 import { MsalService } from 'src/msal/msal.service';
 import { Pagination } from '../../args';
 import { DriveApisService } from '../drive-apis/drive-apis.service';
-import { Drive, DriveItem } from '../models';
+import { AccessRuleAction, Drive, DriveItem } from '../models';
 
 @Injectable()
 export class DriveItemsService {
@@ -18,9 +18,23 @@ export class DriveItemsService {
     private readonly driveApisService: DriveApisService,
   ) {}
 
-  async findMany(parentReferenceId: string, pagination?: Pagination) {
+  async findMany(
+    parentId: string,
+    pagination?: Pagination,
+    validateParentId = true,
+  ) {
+    if (validateParentId) {
+      const driveItem = await this.driveItemModel
+        .findOne({ id: parentId })
+        .exec();
+
+      if (!driveItem) {
+        return null;
+      }
+    }
+
     return await this.driveItemModel
-      .find({ 'parentReference.id': parentReferenceId }, null, {
+      .find({ 'parentReference.id': parentId }, null, {
         skip: pagination?.skip,
         limit: Math.min(pagination?.limit || 20, 25),
         sort: { [pagination?.sortKey || 'name']: pagination?.order },
@@ -28,39 +42,68 @@ export class DriveItemsService {
       .exec();
   }
 
+  async findManyByPath(path: string, pagination?: Pagination) {
+    const driveItem = await this.findOneByPath(path);
+
+    if (!driveItem) {
+      return null;
+    }
+
+    return await this.findMany(driveItem.id, pagination, false);
+  }
+
   async findOneById(id: string) {
     return await this.driveItemModel.findOne({ id }).exec();
   }
 
-  async findOneByPath(
-    path: string,
-    parentReferenceId?: string,
-  ): Promise<DriveItem | null> {
-    // 去掉开头的'/'，然后以 从左至右第一个出现的'/' 为分割符 分割成两个字符串
-    const [name, subPath] = path.replace(/^\/+/, '').split(/(?<=^[^/]+)\//);
-
-    if (!name) {
-      return await this.driveItemModel
-        .findOne({ root: { $exists: true } })
-        .exec();
-    }
-
-    parentReferenceId =
-      parentReferenceId ||
-      (await this.driveItemModel.findOne({ root: { $exists: true } }).exec())
-        ?.id;
-
-    const driveItems = await this.driveItemModel
-      .find({ 'parentReference.id': parentReferenceId })
+  async findOneByPath(path: string) {
+    let res = await this.driveItemModel
+      .findOne({ root: { $exists: true } })
       .exec();
 
-    const driveItem = driveItems.find((driveItem) => driveItem.name === name);
+    while (true) {
+      // 去掉开头的'/'，然后以 从左至右第一个出现的'/' 为分割符 分割成两个字符串
+      const [name, subPath] = path.replace(/^\/+/, '').split(/(?<=^[^/]+)\//);
 
-    return driveItem
-      ? subPath
-        ? this.findOneByPath(subPath, driveItem.id)
-        : driveItem
-      : null;
+      if (!name) {
+        break;
+      }
+
+      const driveItems = await this.driveItemModel
+        .find({ 'parentReference.id': res?.id })
+        .exec();
+
+      res = driveItems.find((item) => item.name === name) || null;
+
+      if (!res) {
+        return null;
+      }
+
+      path = subPath || '';
+    }
+
+    return res;
+  }
+
+  // TODO 判断是 file 还是 folder; 如果允许访问且是 folder, 就把所有子节点都判断是否能访问
+  // TODO 是否加入密码
+  async checkAccessPerm(id: string, driveId: string) {
+    let idPath = await this.getIdPath(id);
+    const accessRules = await this.getAccessRules(driveId);
+
+    while (idPath) {
+      const action = accessRules.get(idPath);
+
+      if (action === AccessRuleAction.ALLOW) {
+        return true;
+      } else if (action === AccessRuleAction.DENY) {
+        return false;
+      }
+      // 去掉 idPath 最后一级
+      idPath = idPath.replace(/\/[^\/]$/, '');
+    }
+    // 到根目录了都没有任何 action, 默认 deny
+    return false;
   }
 
   async getShareLink(driveItem: DriveItem, shareBaseUrl?: string) {
@@ -225,5 +268,52 @@ export class DriveItemsService {
       .exec();
 
     return driveItems.length > 0 ? driveItems[0] : null;
+  }
+
+  private async getIdPath(id: string) {
+    let idPath = '';
+    let currentId = id;
+
+    while (true) {
+      const driveItem = await this.driveItemModel
+        .findOne({ id: currentId })
+        .exec();
+
+      if (!driveItem) {
+        throw new MsGraphExceptopn(`Invalid id of driveItem: ${currentId}`);
+      }
+
+      const parentId = driveItem.parentReference.id || '';
+      idPath = `${parentId}/${idPath}`;
+      currentId = parentId;
+
+      if (!parentId) {
+        break;
+      }
+    }
+
+    return idPath;
+  }
+
+  private async getAccessRules(driveId: string) {
+    const drive = await this.driveModel
+      .findOne({ id: driveId }, { appSettings: 1 })
+      .exec();
+
+    if (!drive) {
+      throw new MsGraphExceptopn(`Invalid id of drive: ${driveId}`);
+    }
+
+    const accessRules = new Map<string, AccessRuleAction>();
+
+    (drive.appSettings?.acessRules || []).forEach(({ path, action }) => {
+      accessRules.set(path, action);
+    });
+
+    if (drive.appSettings?.rootPath) {
+      accessRules.set(drive.appSettings.rootPath, AccessRuleAction.ALLOW);
+    }
+
+    return accessRules;
   }
 }
