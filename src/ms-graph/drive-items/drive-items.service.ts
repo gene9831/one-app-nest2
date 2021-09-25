@@ -2,108 +2,73 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as dateFormat from 'dateformat';
 import { Model } from 'mongoose';
-import { MsGraphExceptopn } from 'src/exceptions/ms-graph-exception';
+import { MsGraphExceptopn } from 'src/exceptions';
 import { MsalService } from 'src/msal/msal.service';
 import { Pagination } from '../../args';
+import { ItemsAndSettingsService } from '../common';
 import { DriveApisService } from '../drive-apis/drive-apis.service';
-import { AccessRuleAction, Drive, DriveItem } from '../models';
+import { getDriveItemArgs } from '../inputs';
+import { Drive, DriveDocument, DriveItem, DriveItemDocument } from '../models';
 
 @Injectable()
 export class DriveItemsService {
   constructor(
-    @InjectModel(Drive.name) private readonly driveModel: Model<Drive>,
+    @InjectModel(Drive.name) private readonly driveModel: Model<DriveDocument>,
     @InjectModel(DriveItem.name)
-    private readonly driveItemModel: Model<DriveItem>,
+    private readonly driveItemModel: Model<DriveItemDocument>,
+    private readonly itemsAndSettingsService: ItemsAndSettingsService,
     private readonly msalService: MsalService,
     private readonly driveApisService: DriveApisService,
   ) {}
 
-  async findMany(
-    parentId: string,
-    pagination?: Pagination,
-    validateParentId = true,
-  ) {
-    if (validateParentId) {
-      const driveItem = await this.driveItemModel
-        .findOne({ id: parentId })
-        .exec();
-
-      if (!driveItem) {
-        return null;
-      }
-    }
-
-    return await this.driveItemModel
-      .find({ 'parentReference.id': parentId }, null, {
-        skip: pagination?.skip,
-        limit: Math.min(pagination?.limit || 20, 25),
-        sort: { [pagination?.sortKey || 'name']: pagination?.order },
-      })
-      .exec();
-  }
-
-  async findManyByPath(path: string, pagination?: Pagination) {
-    const driveItem = await this.findOneByPath(path);
-
-    if (!driveItem) {
+  async findOne(args: getDriveItemArgs) {
+    if (args.id) {
+      return await this.findOneById(args.id);
+    } else if (args.path && args.driveId) {
+      return await this.itemsAndSettingsService.findOneByPath(
+        args.path.toString(),
+        args.driveId,
+      );
+    } else {
       return null;
     }
-
-    return await this.findMany(driveItem.id, pagination, false);
   }
 
   async findOneById(id: string) {
     return await this.driveItemModel.findOne({ id }).exec();
   }
 
-  async findOneByPath(path: string) {
-    let res = await this.driveItemModel
-      .findOne({ root: { $exists: true } })
-      .exec();
+  async findMany(args: getDriveItemArgs, pagination?: Pagination) {
+    let parent: DriveItem | null = null;
 
-    while (true) {
-      // 去掉开头的'/'，然后以 从左至右第一个出现的'/' 为分割符 分割成两个字符串
-      const [name, subPath] = path.replace(/^\/+/, '').split(/(?<=^[^/]+)\//);
-
-      if (!name) {
-        break;
-      }
-
-      const driveItems = await this.driveItemModel
-        .find({ 'parentReference.id': res?.id })
-        .exec();
-
-      res = driveItems.find((item) => item.name === name) || null;
-
-      if (!res) {
-        return null;
-      }
-
-      path = subPath || '';
+    if (args.id) {
+      parent = await this.findOneById(args.id);
+    } else if (args.path && args.driveId) {
+      parent = await this.itemsAndSettingsService.findOneByPath(
+        args.path.toString(),
+        args.driveId,
+      );
     }
 
-    return res;
+    if (!parent) {
+      return null;
+    }
+
+    return await this.findManyByItem(parent, pagination);
   }
 
-  // TODO 判断是 file 还是 folder; 如果允许访问且是 folder, 就把所有子节点都判断是否能访问
-  // TODO 是否加入密码
-  async checkAccessPerm(id: string, driveId: string) {
-    let idPath = await this.getIdPath(id);
-    const accessRules = await this.getAccessRules(driveId);
-
-    while (idPath) {
-      const action = accessRules.get(idPath);
-
-      if (action === AccessRuleAction.ALLOW) {
-        return true;
-      } else if (action === AccessRuleAction.DENY) {
-        return false;
-      }
-      // 去掉 idPath 最后一级
-      idPath = idPath.replace(/\/[^\/]$/, '');
+  async findManyByItem(parent: DriveItem, pagination?: Pagination) {
+    if (!parent.folder) {
+      return null;
     }
-    // 到根目录了都没有任何 action, 默认 deny
-    return false;
+
+    return await this.driveItemModel
+      .find({ 'parentReference.id': parent.id }, null, {
+        skip: pagination?.skip,
+        limit: Math.min(pagination?.limit || 20, 25),
+        sort: { [pagination?.sortKey || 'name']: pagination?.order },
+      })
+      .exec();
   }
 
   async getShareLink(driveItem: DriveItem, shareBaseUrl?: string) {
@@ -268,52 +233,5 @@ export class DriveItemsService {
       .exec();
 
     return driveItems.length > 0 ? driveItems[0] : null;
-  }
-
-  private async getIdPath(id: string) {
-    let idPath = '';
-    let currentId = id;
-
-    while (true) {
-      const driveItem = await this.driveItemModel
-        .findOne({ id: currentId })
-        .exec();
-
-      if (!driveItem) {
-        throw new MsGraphExceptopn(`Invalid id of driveItem: ${currentId}`);
-      }
-
-      const parentId = driveItem.parentReference.id || '';
-      idPath = `${parentId}/${idPath}`;
-      currentId = parentId;
-
-      if (!parentId) {
-        break;
-      }
-    }
-
-    return idPath;
-  }
-
-  private async getAccessRules(driveId: string) {
-    const drive = await this.driveModel
-      .findOne({ id: driveId }, { appSettings: 1 })
-      .exec();
-
-    if (!drive) {
-      throw new MsGraphExceptopn(`Invalid id of drive: ${driveId}`);
-    }
-
-    const accessRules = new Map<string, AccessRuleAction>();
-
-    (drive.appSettings?.acessRules || []).forEach(({ path, action }) => {
-      accessRules.set(path, action);
-    });
-
-    if (drive.appSettings?.rootPath) {
-      accessRules.set(drive.appSettings.rootPath, AccessRuleAction.ALLOW);
-    }
-
-    return accessRules;
   }
 }

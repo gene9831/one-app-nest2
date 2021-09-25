@@ -3,7 +3,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 import { GqlFieldRoles } from 'src/decorators';
 import { Role } from 'src/enums';
-import { AppSettingsOfDrive, IdentitySet, Quota } from './others.model';
+import { IdentitySet, Quota } from './others.model';
 
 /**
  * https://docs.microsoft.com/en-us/graph/api/resources/drive?view=graph-rest-1.0#properties
@@ -11,7 +11,7 @@ import { AppSettingsOfDrive, IdentitySet, Quota } from './others.model';
 @Schema({ collection: 'drives', timestamps: true })
 @ObjectType({ description: `Roles: ${Role.Admin}` })
 @GqlFieldRoles(Role.Admin)
-export class Drive extends Document {
+export class Drive {
   @Prop({ required: true })
   @Field({ description: `Roles: ${Role.Guest}` })
   @GqlFieldRoles(Role.Guest)
@@ -65,10 +65,7 @@ export class Drive extends Document {
 
   @Prop()
   entireUpdateTag?: string;
-
-  @Prop(AppSettingsOfDrive)
-  @Field(() => AppSettingsOfDrive, { nullable: true })
-  appSettings?: AppSettingsOfDrive;
 }
 
+export type DriveDocument = Drive & Document;
 export const DriveScheme = SchemaFactory.createForClass(Drive);

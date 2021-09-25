@@ -4,7 +4,7 @@ import { Model } from 'mongoose';
 import { MsalException } from 'src/exceptions';
 import { MSAL_OPTIONS } from './constants';
 import { MsalModuleOptions } from './interfaces';
-import { TokenCache } from './models';
+import { TokenCache, TokenCacheDocument } from './models';
 import {
   AuthorizationCodeRequest,
   AuthorizationUrlRequest,
@@ -24,7 +24,7 @@ export class MsalService extends ConfidentialClientApplication {
   constructor(
     @Inject(MSAL_OPTIONS) options: MsalModuleOptions,
     @InjectModel(TokenCache.name)
-    readonly tokenCacheModel: Model<TokenCache>,
+    readonly tokenCacheModel: Model<TokenCacheDocument>,
   ) {
     super({
       auth: options,

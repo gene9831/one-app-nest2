@@ -1,4 +1,4 @@
-import { Field, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
+import { Field, Int, ObjectType } from '@nestjs/graphql';
 import { Prop, Schema } from '@nestjs/mongoose';
 import { Schema as MongooseSchema } from 'mongoose';
 
@@ -134,35 +134,4 @@ export class SharePermission {
     webUrl: string;
     preventsDownload: boolean;
   };
-}
-
-export enum AccessRuleAction {
-  ALLOW = 'allow',
-  DENY = 'deny',
-}
-
-registerEnumType(AccessRuleAction, { name: 'AccessRuleAction' });
-
-@Schema({ _id: false })
-@ObjectType()
-export class AccessRule {
-  @Prop({ required: true })
-  @Field()
-  path: string;
-
-  @Prop({ required: true, enum: AccessRuleAction })
-  @Field(() => AccessRuleAction)
-  action: AccessRuleAction;
-}
-
-@Schema({ _id: false })
-@ObjectType()
-export class AppSettingsOfDrive {
-  @Prop({ default: '/' })
-  @Field({ nullable: true, defaultValue: '/' })
-  rootPath?: string;
-
-  @Prop([AccessRule])
-  @Field(() => [AccessRule], { nullable: true })
-  acessRules?: AccessRule[];
 }

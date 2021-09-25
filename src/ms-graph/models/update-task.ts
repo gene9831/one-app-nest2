@@ -11,7 +11,7 @@ registerEnumType(registerEnumType, { name: 'registerEnumType' });
 
 @Schema({ collection: 'update_tasks', timestamps: true })
 @ObjectType({ description: '更新任务完成后，再过10分钟自动删除更新记录' })
-export class UpdateTask extends Document {
+export class UpdateTask {
   @Prop({ required: true })
   @Field()
   name: string;
@@ -27,6 +27,7 @@ export class UpdateTask extends Document {
   static readonly Completed = UpdateTaskCompleted;
 }
 
+export type UpdateTaskDocument = UpdateTask & Document;
 export const UpdateTaskScheme = SchemaFactory.createForClass(UpdateTask);
 
 UpdateTaskScheme.index({ updatedAt: 1 }, { expireAfterSeconds: 600 });

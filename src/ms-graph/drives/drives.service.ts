@@ -5,16 +5,23 @@ import { Model } from 'mongoose';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MsalService } from 'src/msal/msal.service';
 import { DriveApisService } from '../drive-apis/drive-apis.service';
-import { Drive, DriveItem, UpdateTask } from '../models';
+import {
+  Drive,
+  DriveDocument,
+  DriveItem,
+  DriveItemDocument,
+  UpdateTask,
+  UpdateTaskDocument,
+} from '../models';
 
 @Injectable()
 export class DrivesService {
   constructor(
-    @InjectModel(Drive.name) private readonly driveModel: Model<Drive>,
+    @InjectModel(Drive.name) private readonly driveModel: Model<DriveDocument>,
     @InjectModel(DriveItem.name)
-    private readonly driveItemModel: Model<DriveItem>,
+    private readonly driveItemModel: Model<DriveItemDocument>,
     @InjectModel(UpdateTask.name)
-    private readonly updateTaskModel: Model<UpdateTask>,
+    private readonly updateTaskModel: Model<UpdateTaskDocument>,
     private readonly msalService: MsalService,
     private readonly driveApisService: DriveApisService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger,

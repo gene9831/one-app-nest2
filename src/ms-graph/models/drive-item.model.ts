@@ -14,7 +14,7 @@ import {
  */
 @Schema({ collection: 'drive_items' })
 @ObjectType()
-export class DriveItem extends Document {
+export class DriveItem {
   @Prop({ required: true })
   @Field()
   id: string;
@@ -106,4 +106,5 @@ export class DriveItem extends Document {
   entireUpdateTag?: string;
 }
 
+export type DriveItemDocument = DriveItem & Document;
 export const DriveItemScheme = SchemaFactory.createForClass(DriveItem);

@@ -1,5 +1,6 @@
 import { HttpModule, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ItemsAndSettingsService } from './common';
 import { DriveApisService } from './drive-apis/drive-apis.service';
 import { DriveItemsResolver } from './drive-items/drive-items.resolver';
 import { DriveItemsService } from './drive-items/drive-items.service';
@@ -14,6 +15,8 @@ import {
   DriveItem,
   DriveItemScheme,
   DriveScheme,
+  DriveSettings,
+  DriveSettingsSchema,
   UpdateTask,
   UpdateTaskScheme,
 } from './models';
@@ -21,18 +24,10 @@ import {
 @Module({
   imports: [
     MongooseModule.forFeature([
-      {
-        name: Drive.name,
-        schema: DriveScheme,
-      },
-      {
-        name: DriveItem.name,
-        schema: DriveItemScheme,
-      },
-      {
-        name: UpdateTask.name,
-        schema: UpdateTaskScheme,
-      },
+      { name: Drive.name, schema: DriveScheme },
+      { name: DriveItem.name, schema: DriveItemScheme },
+      { name: UpdateTask.name, schema: UpdateTaskScheme },
+      { name: DriveSettings.name, schema: DriveSettingsSchema },
     ]),
     HttpModule,
   ],
@@ -46,6 +41,7 @@ import {
     DriveItemsResolver,
     DriveSettingsService,
     DriveSettingsResolver,
+    ItemsAndSettingsService,
   ],
 })
 export class MsGraphModule {}

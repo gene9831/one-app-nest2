@@ -2,6 +2,8 @@ import { Pagination } from 'src/args';
 import { Roles } from 'src/decorators';
 import { Role } from 'src/enums';
 import { AuthJwtGuard } from 'src/guards';
+import { ItemsAndSettingsService } from '../common';
+import { getDriveItemArgs } from '../inputs';
 import { DriveItem } from '../models';
 import { DriveItemsService } from './drive-items.service';
 import {
@@ -21,28 +23,25 @@ import {
 @Resolver(() => DriveItem)
 @UseGuards(AuthJwtGuard)
 export class DriveItemsResolver {
-  constructor(private readonly driveItemsService: DriveItemsService) {}
+  constructor(
+    private readonly driveItemsService: DriveItemsService,
+    private readonly itemsAndSettingsService: ItemsAndSettingsService,
+  ) {}
 
-  @Query(() => [DriveItem])
+  @Query(() => [DriveItem], {
+    description: '(Id) 或 (path, driveId) 二选一，Id 优先',
+  })
   async driveItems(
-    @Args('parentId', { nullable: true }) parentId?: string,
-    @Args('path', { nullable: true }) path?: string,
+    @Args() args: getDriveItemArgs,
     @Args({ type: () => Pagination, nullable: true }) pagination?: Pagination,
   ): Promise<DriveItem[]> {
-    if (!Boolean(parentId || path)) {
+    if (!Boolean(args.id || (args.path && args.driveId))) {
       throw new BadRequestException(
-        'At least one non-empty parameter between parentReferenceId and path',
+        'Id is not empty or path and driveId are not empty',
       );
     }
 
-    const driveItems = await (async () => {
-      if (parentId) {
-        return await this.driveItemsService.findMany(parentId, pagination);
-      } else if (path) {
-        return await this.driveItemsService.findManyByPath(path, pagination);
-      }
-      return null;
-    })();
+    const driveItems = await this.driveItemsService.findMany(args, pagination);
 
     if (!driveItems) {
       throw new NotFoundException();
@@ -51,29 +50,30 @@ export class DriveItemsResolver {
     return driveItems;
   }
 
-  @Query(() => DriveItem)
-  async driveItem(
-    @Args('id', { nullable: true }) id?: string,
-    @Args('path', { nullable: true }) path?: string,
-  ) {
-    if (!Boolean(id || path)) {
+  @Query(() => DriveItem, {
+    description: '(Id) 或 (path, driveId) 二选一，Id 优先',
+  })
+  async driveItem(@Args() args: getDriveItemArgs) {
+    if (!Boolean(args.id || (args.path && args.driveId))) {
       throw new BadRequestException(
-        'At least one non-empty parameter between id and path',
+        'Id is not empty or path and driveId are not empty',
       );
     }
 
-    const driveItem = await (async () => {
-      if (id) {
-        return await this.driveItemsService.findOneById(id);
-      } else if (path) {
-        return await this.driveItemsService.findOneByPath(path);
-      }
-      return null;
-    })();
+    const driveItem = await this.driveItemsService.findOne(args);
 
     if (!driveItem) {
       throw new NotFoundException();
     }
+
+    // TODO 检查权限
+    const res = await this.itemsAndSettingsService.checkAccessPerm(
+      driveItem.id,
+      driveItem.parentReference.driveId,
+      args.password,
+    );
+
+    console.log(res);
 
     return driveItem;
   }

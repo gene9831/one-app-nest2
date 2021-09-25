@@ -2,14 +2,22 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+"""
+Absolte path must starts with "/"
+"""
+scalar AbsolutePath
+
 type AccessRule {
+  _id: ObjectId!
   action: AccessRuleAction!
-  path: String!
+  password: String
+  path: AbsolutePath!
 }
 
 enum AccessRuleAction {
   ALLOW
   DENY
+  PASSWD
 }
 
 type Account {
@@ -19,11 +27,6 @@ type Account {
   name: String
   tenantId: String!
   username: String!
-}
-
-type AppSettingsOfDrive {
-  acessRules: [AccessRule!]
-  rootPath: String
 }
 
 type AuthResult {
@@ -38,7 +41,6 @@ scalar DateTime
 
 """Roles: admin"""
 type Drive {
-  appSettings: AppSettingsOfDrive
   createdBy: IdentitySet!
   createdDateTime: DateTime!
   description: String
@@ -64,6 +66,14 @@ type DriveItem {
   name: String!
   shareLink: String
   size: Float!
+}
+
+type DriveSettings {
+  accessRules: [AccessRule!]
+  driveId: String!
+  rootPath: AbsolutePath
+  rootPathEnabled: Boolean
+  type: SettingsType!
 }
 
 type File {
@@ -94,11 +104,17 @@ type IdentitySet {
 }
 
 type Mutation {
+  """Roles: admin"""
+  addAccessRule(action: AccessRuleAction!, driveId: String!, password: String, path: AbsolutePath!): Int!
+
   """Roles: user"""
   auth: AuthResult!
 
   """Roles: admin"""
   createShareLink(id: String!): String!
+
+  """Roles: admin"""
+  deleteAccessRule(_id: ObjectId!, driveId: String!): Int!
 
   """Roles: admin"""
   deleteShareLink(id: String!): String!
@@ -111,7 +127,13 @@ type Mutation {
   removeDrive(localAccountId: String!): Boolean!
 
   """Roles: admin"""
+  updateAccessRule(_id: ObjectId!, action: AccessRuleAction, driveId: String!, password: String, path: AbsolutePath): Int!
+
+  """Roles: admin"""
   updateDrive(entire: Boolean = false, localAccountId: String!): String!
+
+  """Roles: admin"""
+  updateDriveSettings(driveId: String!, rootPath: AbsolutePath, rootPathEnabled: Boolean): Int!
 
   """Roles: admin"""
   updateDrives(entire: Boolean = false, localAccountIds: [String!]): String!
@@ -134,8 +156,15 @@ type Query {
 
   """Roles: admin"""
   authCodeUrl: String!
-  driveItem(id: String, path: String): DriveItem!
-  driveItems(limit: Int = 20, order: Order = ASC, parentId: String, path: String, skip: Int = 0, sortKey: String): [DriveItem!]!
+
+  """(Id) 或 (path, driveId) 二选一，Id 优先"""
+  driveItem(driveId: String, id: String, password: String, path: AbsolutePath): DriveItem!
+
+  """(Id) 或 (path, driveId) 二选一，Id 优先"""
+  driveItems(driveId: String, id: String, limit: Int = 20, order: Order = ASC, password: String, path: AbsolutePath, skip: Int = 0, sortKey: String): [DriveItem!]!
+
+  """Roles: admin"""
+  driveSettings(driveId: String!): DriveSettings!
 
   """Roles: admin | guest"""
   drives: [Drive!]!
@@ -150,6 +179,11 @@ type Quota {
   state: String!
   total: Float!
   used: Float!
+}
+
+enum SettingsType {
+  DRIVE
+  ONE_APP
 }
 
 """更新任务完成后，再过10分钟自动删除更新记录"""
