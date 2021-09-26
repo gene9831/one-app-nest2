@@ -104,6 +104,12 @@ export class DriveItem {
    */
   @Prop()
   entireUpdateTag?: string;
+
+  @Field({ nullable: true, description: 'For access control' })
+  accessDenied?: boolean;
+
+  @Field({ nullable: true, description: 'For access control' })
+  requiredPassword?: boolean;
 }
 
 export type DriveItemDocument = DriveItem & Document;

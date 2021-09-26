@@ -57,6 +57,8 @@ type Drive {
 }
 
 type DriveItem {
+  """For access control"""
+  accessDenied: Boolean
   createdDateTime: DateTime!
   description: String
   file: File
@@ -64,6 +66,9 @@ type DriveItem {
   id: String!
   lastModifiedDateTime: DateTime!
   name: String!
+
+  """For access control"""
+  requiredPassword: Boolean
   shareLink: String
   size: Float!
 }

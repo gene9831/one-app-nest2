@@ -2,13 +2,27 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as dateFormat from 'dateformat';
 import { Model } from 'mongoose';
-import { MsGraphExceptopn } from 'src/exceptions';
+import { SettingsType } from 'src/models';
 import { MsalService } from 'src/msal/msal.service';
 import { Pagination } from '../../args';
 import { ItemsAndSettingsService } from '../common';
 import { DriveApisService } from '../drive-apis/drive-apis.service';
 import { getDriveItemArgs } from '../inputs';
-import { Drive, DriveDocument, DriveItem, DriveItemDocument } from '../models';
+import {
+  AuthenticationError,
+  DocumentNotFoundError,
+  ForbiddenError,
+} from 'src/exceptions';
+import {
+  AccessRule,
+  AccessRuleAction,
+  Drive,
+  DriveDocument,
+  DriveItem,
+  DriveItemDocument,
+  DriveSettings,
+  DriveSettingsDocument,
+} from '../models';
 
 @Injectable()
 export class DriveItemsService {
@@ -16,25 +30,33 @@ export class DriveItemsService {
     @InjectModel(Drive.name) private readonly driveModel: Model<DriveDocument>,
     @InjectModel(DriveItem.name)
     private readonly driveItemModel: Model<DriveItemDocument>,
+    @InjectModel(DriveSettings.name)
+    private readonly driveSettingsModel: Model<DriveSettingsDocument>,
     private readonly itemsAndSettingsService: ItemsAndSettingsService,
     private readonly msalService: MsalService,
     private readonly driveApisService: DriveApisService,
   ) {}
 
   async findOne(args: getDriveItemArgs) {
+    let driveItem: DriveItem | null = null;
+
     if (args.id) {
-      return await this.findOneById(args.id);
+      driveItem = await this.findOneById(args.id);
     } else if (args.path && args.driveId) {
-      return await this.itemsAndSettingsService.findOneByPath(
+      driveItem = await this.itemsAndSettingsService.findOneByPath(
         args.path.toString(),
         args.driveId,
       );
-    } else {
-      return null;
     }
+
+    if (driveItem) {
+      await this.checkAccessPerm(driveItem, args.password);
+    }
+
+    return driveItem;
   }
 
-  async findOneById(id: string) {
+  private async findOneById(id: string) {
     return await this.driveItemModel.findOne({ id }).exec();
   }
 
@@ -54,10 +76,29 @@ export class DriveItemsService {
       return null;
     }
 
-    return await this.findManyByItem(parent, pagination);
+    const path = await this.getDriveItemPath(parent.id);
+    const accessRules = await this.getAccessRulesByDriveId(
+      parent.parentReference.driveId,
+    );
+
+    await this.checkPathAccessPerm(path, accessRules, args.password);
+
+    const driveItems = await this.findManyByItem(parent, pagination);
+
+    for (const child of driveItems || []) {
+      const childPath = `${path}/${child.name}`;
+      const rule = accessRules.get(childPath);
+      if (rule?.action === AccessRuleAction.DENY) {
+        child.accessDenied = true;
+      } else if (rule?.action === AccessRuleAction.PASSWD) {
+        child.requiredPassword = true;
+      }
+    }
+
+    return driveItems;
   }
 
-  async findManyByItem(parent: DriveItem, pagination?: Pagination) {
+  private async findManyByItem(parent: DriveItem, pagination?: Pagination) {
     if (!parent.folder) {
       return null;
     }
@@ -101,7 +142,7 @@ export class DriveItemsService {
     }
 
     if (!localId) {
-      throw new MsGraphExceptopn(
+      throw new DocumentNotFoundError(
         `AccountLocalId of driveItem[${driveItem?.id}] is null`,
       );
     }
@@ -151,7 +192,7 @@ export class DriveItemsService {
     }
 
     if (!localId) {
-      throw new MsGraphExceptopn(
+      throw new DocumentNotFoundError(
         `AccountLocalId of driveItem[${driveItem?.id}] is null`,
       );
     }
@@ -187,7 +228,7 @@ export class DriveItemsService {
     const localId = drive?.owner?.user?.id;
 
     if (!localId) {
-      throw new MsGraphExceptopn(
+      throw new DocumentNotFoundError(
         `AccountLocalId of drive[${drive?.id}] is null`,
       );
     }
@@ -233,5 +274,109 @@ export class DriveItemsService {
       .exec();
 
     return driveItems.length > 0 ? driveItems[0] : null;
+  }
+
+  private async checkAccessPerm(driveItem: DriveItem, password?: string) {
+    const path = await this.getDriveItemPath(driveItem.id);
+    const accessRules = await this.getAccessRulesByDriveId(
+      driveItem.parentReference.driveId,
+    );
+
+    return this.checkPathAccessPerm(path, accessRules, password);
+  }
+
+  private async checkPathAccessPerm(
+    path: string,
+    accessRules: Map<string, Omit<AccessRule, '_id'>>,
+    password?: string,
+  ) {
+    while (path) {
+      const rule = accessRules.get(path);
+
+      if (rule) {
+        switch (rule.action) {
+          case AccessRuleAction.ALLOW:
+            return true;
+          case AccessRuleAction.DENY:
+            throw new ForbiddenError();
+          case AccessRuleAction.PASSWD:
+            if (rule.password !== password) {
+              throw new AuthenticationError(`Authentication failed`);
+            }
+          default:
+            break;
+        }
+      }
+
+      if (path === '/') {
+        break;
+      }
+
+      // 去掉 path 最后一级
+      path = path.replace(/\/[^\/]+$/, '') || '/';
+    }
+    // 到根目录了都没有任何 action, 默认 deny
+    throw new ForbiddenError();
+  }
+
+  /**
+   *
+   * @param id
+   * @returns /path/to/driveItem 保证长度大于0, 左侧有'/', 右侧没有'/', root为'/'
+   */
+  private async getDriveItemPath(id: string) {
+    let path = '';
+    let currentId = id;
+
+    while (true) {
+      const driveItem = await this.driveItemModel
+        .findOne({ id: currentId })
+        .exec();
+
+      if (!driveItem) {
+        throw new DocumentNotFoundError(
+          `Invalid id of driveItem: ${currentId}`,
+        );
+      }
+
+      const parentId = driveItem.parentReference.id;
+      if (!parentId) {
+        // 这个就是root节点了
+        break;
+      }
+
+      path = `/${driveItem.name}${path}`;
+      currentId = parentId;
+    }
+
+    return path || '/';
+  }
+
+  private async getAccessRulesByDriveId(driveId: string) {
+    const driveSettings = await this.driveSettingsModel
+      .findOne({
+        type: SettingsType.DRIVE,
+        driveId,
+      })
+      .exec();
+
+    if (!driveSettings) {
+      throw new DocumentNotFoundError(`Invalid id of drive: ${driveId}`);
+    }
+
+    const accessRules = new Map<string, Omit<AccessRule, '_id'>>();
+
+    (driveSettings?.accessRules || []).forEach((rule) => {
+      accessRules.set(rule.path.toString(), rule);
+    });
+
+    if (driveSettings?.rootPathEnabled && driveSettings?.rootPath) {
+      accessRules.set(driveSettings.rootPath.toString(), {
+        path: driveSettings.rootPath,
+        action: AccessRuleAction.ALLOW,
+      });
+    }
+
+    return accessRules;
   }
 }

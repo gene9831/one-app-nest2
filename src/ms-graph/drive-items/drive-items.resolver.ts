@@ -66,15 +66,6 @@ export class DriveItemsResolver {
       throw new NotFoundException();
     }
 
-    // TODO 检查权限
-    const res = await this.itemsAndSettingsService.checkAccessPerm(
-      driveItem.id,
-      driveItem.parentReference.driveId,
-      args.password,
-    );
-
-    console.log(res);
-
     return driveItem;
   }
 
