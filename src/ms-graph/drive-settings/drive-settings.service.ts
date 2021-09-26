@@ -158,7 +158,7 @@ export class DriveSettingsService {
     }
 
     if (path) {
-      this.validatePath(driveId, path);
+      await this.validatePath(driveId, path);
     }
 
     return true;
