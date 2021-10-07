@@ -1,73 +1,58 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo_text.svg" width="320" alt="Nest Logo" /></a>
-</p>
+# One app nest
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## 描述
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+[Nest](https://github.com/nestjs/nest) + [Typescript](https://www.typescriptlang.org/) 实现的 OneDrive 文件分享系统。
 
-## Description
+使用 [Microsoft Graph Api](https://docs.microsoft.com/zh-cn/graph/api/resources/onedrive?view=graph-rest-1.0) 来缓存文件信息
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Installation
+## 安装
 
 ```bash
-$ npm install
+yarn
 ```
 
-## Running the app
+## 配置
+
+路径: `src/config.yaml`。没有文件则新建
+
+[注册微软应用教程](https://docs.microsoft.com/zh-cn/graph/tutorials/node?tutorial-step=2)。重定向 url 填写 `http://localhost:3000/msal/authCallback`
+
+- clientId: 概述 > 应用程序(客户端) ID
+- clientSecret: 证书和密码 > 客户端密码
+- redirectUri: 身份验证 > 平台配置 > Web
+
+```yaml
+db:
+  mongo:
+    uri: mongodb://username:password@host:port/collection
+
+## 'production', 'development'; default 'production'
+# env: production
+
+jwt:
+  secret: 'secret'
+  signOptions:
+    # https://github.com/vercel/ms#examples
+    expiresIn: '7d'
+
+# logfiles:
+#   # 'error', 'warn', 'info', 'verbose'
+#   - level: info
+
+msal:
+  clientId: clientId
+  clientSecret: clientSecret
+  redirectUri: http://localhost:3000/msal/authCallback
+  scopes:
+    - Files.ReadWrite
+```
+
+## 运行
+
+这里使用 [`pm2`](https://pm2.keymetrics.io/docs/usage/quick-start/) 管理 `nodejs` 后端应用
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+yarn build
+pm2 start dist/main.js --name one-nest-app
 ```
-
-## Test
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](LICENSE).
