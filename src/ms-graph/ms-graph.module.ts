@@ -1,6 +1,5 @@
 import { HttpModule, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ItemsAndSettingsService } from './common';
 import { DriveApisService } from './drive-apis/drive-apis.service';
 import { DriveItemsResolver } from './drive-items/drive-items.resolver';
 import { DriveItemsService } from './drive-items/drive-items.service';
@@ -41,7 +40,6 @@ import {
     DriveItemsResolver,
     DriveSettingsService,
     DriveSettingsResolver,
-    ItemsAndSettingsService,
   ],
 })
 export class MsGraphModule {}

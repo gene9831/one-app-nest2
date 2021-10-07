@@ -5,9 +5,8 @@ import { Model } from 'mongoose';
 import { SettingsType } from 'src/models';
 import { MsalService } from 'src/msal/msal.service';
 import { Pagination } from '../../args';
-import { ItemsAndSettingsService } from '../common';
 import { DriveApisService } from '../drive-apis/drive-apis.service';
-import { getDriveItemArgs } from '../inputs';
+import { GetDriveItemArgs } from '../inputs';
 import {
   AuthenticationError,
   DocumentNotFoundError,
@@ -23,6 +22,7 @@ import {
   DriveSettings,
   DriveSettingsDocument,
 } from '../models';
+import { AbsolutePath } from 'src/gql-scalars/absolute-path.scalar';
 
 @Injectable()
 export class DriveItemsService {
@@ -32,20 +32,19 @@ export class DriveItemsService {
     private readonly driveItemModel: Model<DriveItemDocument>,
     @InjectModel(DriveSettings.name)
     private readonly driveSettingsModel: Model<DriveSettingsDocument>,
-    private readonly itemsAndSettingsService: ItemsAndSettingsService,
     private readonly msalService: MsalService,
     private readonly driveApisService: DriveApisService,
   ) {}
 
-  async findOne(args: getDriveItemArgs) {
+  async findOne(args: GetDriveItemArgs) {
     let driveItem: DriveItem | null = null;
 
     if (args.id) {
       driveItem = await this.findOneById(args.id);
     } else if (args.path && args.driveId) {
-      driveItem = await this.itemsAndSettingsService.findOneByPath(
-        args.path.toString(),
+      driveItem = await this.findOneByLogicAbsolutePath(
         args.driveId,
+        args.path,
       );
     }
 
@@ -60,16 +59,13 @@ export class DriveItemsService {
     return await this.driveItemModel.findOne({ id }).exec();
   }
 
-  async findMany(args: getDriveItemArgs, pagination?: Pagination) {
+  async findMany(args: GetDriveItemArgs, pagination?: Pagination) {
     let parent: DriveItem | null = null;
 
     if (args.id) {
       parent = await this.findOneById(args.id);
     } else if (args.path && args.driveId) {
-      parent = await this.itemsAndSettingsService.findOneByPath(
-        args.path.toString(),
-        args.driveId,
-      );
+      parent = await this.findOneByLogicAbsolutePath(args.driveId, args.path);
     }
 
     if (!parent) {
@@ -378,5 +374,47 @@ export class DriveItemsService {
     }
 
     return accessRules;
+  }
+
+  private async findOneByLogicAbsolutePath(
+    driveId: string,
+    path: AbsolutePath,
+  ) {
+    let res = await this.driveItemModel
+      .findOne({ 'parentReference.driveId': driveId, root: { $exists: true } })
+      .exec();
+
+    if (!res) {
+      throw new DocumentNotFoundError(`Invalid driveId: ${driveId}`);
+    }
+
+    const driveSettings = await this.driveSettingsModel
+      .findOne({ driveId: res.parentReference.driveId })
+      .exec();
+
+    path = new AbsolutePath((driveSettings?.rootPath || '') + path.toString());
+
+    while (true) {
+      // 去掉开头的'/'，然后以 从左至右第一个出现的'/' 为分割符 分割成两个字符串
+      const [name, subPath] = path.replace(/^\/+/, '').split(/(?<=^[^/]+)\//);
+
+      if (!name) {
+        break;
+      }
+
+      const driveItems: DriveItemDocument[] = await this.driveItemModel
+        .find({ 'parentReference.id': res.id })
+        .exec();
+
+      res = driveItems.find((item) => item.name === name) || null;
+
+      if (!res) {
+        return null;
+      }
+
+      path = subPath || '';
+    }
+
+    return res;
   }
 }

@@ -2,7 +2,7 @@ import { ArgsType, Field } from '@nestjs/graphql';
 import { AbsolutePath } from 'src/gql-scalars/absolute-path.scalar';
 
 @ArgsType()
-export class getDriveItemArgs {
+export class GetDriveItemArgs {
   @Field({ nullable: true })
   id?: string;
 

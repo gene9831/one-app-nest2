@@ -11,8 +11,8 @@ export const validate = (config: Record<string, unknown>) => {
       }).required(),
     }).required(),
     env: Joi.string()
-      .valid('development', 'production', 'test', 'provision')
-      .default('development'),
+      .valid('development', 'production', 'test')
+      .default('production'),
     jwt: Joi.object({
       signOptions: Joi.object({
         algorithm: Joi.string(),

@@ -3,7 +3,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types as MongooseTypes } from 'mongoose';
 import { AbsolutePath } from 'src/gql-scalars/absolute-path.scalar';
 import { SettingsType } from 'src/models';
-import { ItemsAndSettingsService } from '../common';
 import { UpdateDriveSettings } from '../inputs';
 import {
   ConflicError,
@@ -14,6 +13,8 @@ import {
   AccessRuleAction,
   Drive,
   DriveDocument,
+  DriveItem,
+  DriveItemDocument,
   DriveSettings,
   DriveSettingsDocument,
 } from '../models';
@@ -25,7 +26,8 @@ export class DriveSettingsService {
     private readonly driveSettingsModel: Model<DriveSettingsDocument>,
     @InjectModel(Drive.name)
     private readonly driveModel: Model<DriveDocument>,
-    private readonly itemsAndSettingsService: ItemsAndSettingsService,
+    @InjectModel(DriveItem.name)
+    private readonly driveItemModel: Model<DriveItemDocument>,
   ) {}
 
   private async create(driveId: string) {
@@ -165,11 +167,7 @@ export class DriveSettingsService {
   }
 
   private async validatePath(driveId: string, path: AbsolutePath) {
-    const driveItem = await this.itemsAndSettingsService.findOneByPath(
-      path.toString(),
-      driveId,
-      true,
-    );
+    const driveItem = await this.findOneByAbsolutePath(driveId, path);
 
     if (!driveItem) {
       throw new DocumentNotFoundError(
@@ -178,5 +176,38 @@ export class DriveSettingsService {
     }
 
     return true;
+  }
+
+  private async findOneByAbsolutePath(driveId: string, path: AbsolutePath) {
+    let res = await this.driveItemModel
+      .findOne({ 'parentReference.driveId': driveId, root: { $exists: true } })
+      .exec();
+
+    if (!res) {
+      throw new DocumentNotFoundError(`Invalid driveId: ${driveId}`);
+    }
+
+    while (true) {
+      // 去掉开头的'/'，然后以 从左至右第一个出现的'/' 为分割符 分割成两个字符串
+      const [name, subPath] = path.replace(/^\/+/, '').split(/(?<=^[^/]+)\//);
+
+      if (!name) {
+        break;
+      }
+
+      const driveItems: DriveItemDocument[] = await this.driveItemModel
+        .find({ 'parentReference.id': res.id })
+        .exec();
+
+      res = driveItems.find((item) => item.name === name) || null;
+
+      if (!res) {
+        return null;
+      }
+
+      path = subPath || '';
+    }
+
+    return res;
   }
 }
