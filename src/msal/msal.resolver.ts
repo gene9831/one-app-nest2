@@ -13,7 +13,7 @@ import { MsalService } from './msal.service';
 export class MsalResolver {
   constructor(private readonly msalService: MsalService) {}
 
-  @Query(() => String, { description: `Roles: ${Role.Admin}` })
+  @Mutation(() => String, { description: `Roles: ${Role.Admin}` })
   async authCodeUrl(): Promise<string> {
     return await this.msalService.getAuthCodeUrl();
   }

@@ -48,6 +48,8 @@ export class DrivesService {
       accounts.push(...(await tokenCache.getAllAccounts()));
     }
 
+    // TODO 如何保证在同一时刻只会有一个更新任务
+    // 加一个队列，生产者-消费者
     const updateTaskId = (
       await this.updateTaskModel.create({ name: 'updateTask' })
     )._id.toHexString();

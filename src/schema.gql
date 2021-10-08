@@ -116,6 +116,9 @@ type Mutation {
   auth: AuthResult!
 
   """Roles: admin"""
+  authCodeUrl: String!
+
+  """Roles: admin"""
   createShareLink(id: String!): String!
 
   """Roles: admin"""
@@ -158,9 +161,6 @@ type Query {
 
   """Roles: admin"""
   accounts: [Account!]!
-
-  """Roles: admin"""
-  authCodeUrl: String!
 
   """(Id) 或 (path, driveId) 二选一，Id 优先"""
   driveItem(driveId: String, id: String, password: String, path: AbsolutePath): DriveItem!

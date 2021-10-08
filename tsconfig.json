@@ -1,5 +1,5 @@
 {
-  // https://jkchao.github.io/typescript-book-chinese/project/compilationContext.html#编译选项
+  // https://www.tslang.cn/docs/handbook/compiler-options.html
   "compilerOptions": {
     // 基本选项
     "target": "es2017",
@@ -9,8 +9,9 @@
     "outDir": "./dist",
     "removeComments": true,
 
-    // 严格的类型检查选项
-    "strictNullChecks": true,
+    // 启用所有严格类型检查选项
+    "strict": true,
+    "strictPropertyInitialization": false,
 
     // 模块解析选项
     "allowSyntheticDefaultImports": true,
