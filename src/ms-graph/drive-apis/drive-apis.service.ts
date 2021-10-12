@@ -1,7 +1,9 @@
-import { HttpService, Inject, Injectable, Logger } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { strict as assert } from 'assert';
 import { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { lastValueFrom } from 'rxjs';
 import { Drive, DriveItem, SharePermission } from '../models';
 
 const MS_GRAPH_API = 'https://graph.microsoft.com/v1.0';
@@ -88,8 +90,8 @@ export class DriveApisService {
       );
       return res.headers.location as string;
     } catch (err) {
-      if (err?.isAxiosError) {
-        const axiosError: AxiosError = err;
+      if ((<AxiosError>err)?.isAxiosError) {
+        const axiosError = err as AxiosError;
 
         if (axiosError.response) {
           const statusCode = axiosError.response.status;
@@ -120,15 +122,15 @@ export class DriveApisService {
     const { headers, ...others } = config;
 
     try {
-      return await this.httpService
-        .request<T>({
+      return await lastValueFrom(
+        this.httpService.request<T>({
           headers: { Authorization: `Bearer ${accessToken}`, ...headers },
           ...others,
-        })
-        .toPromise();
+        }),
+      );
     } catch (err) {
-      if (err?.isAxiosError) {
-        const axiosError: AxiosError = err;
+      if ((<AxiosError>err)?.isAxiosError) {
+        const axiosError = err as AxiosError<any>;
 
         if (axiosError.response) {
           const statusCode = axiosError.response.status;

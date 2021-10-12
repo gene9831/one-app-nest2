@@ -195,8 +195,10 @@ export class DriveSettingsService {
         break;
       }
 
-      const driveItems: DriveItemDocument[] = await this.driveItemModel
-        .find({ 'parentReference.id': res.id })
+      const parentId: string = res.id;
+
+      const driveItems = await this.driveItemModel
+        .find({ 'parentReference.id': parentId })
         .exec();
 
       res = driveItems.find((item) => item.name === name) || null;

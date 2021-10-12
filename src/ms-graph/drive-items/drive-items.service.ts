@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as dateFormat from 'dateformat';
 import { Model } from 'mongoose';
+import { AbsolutePath } from 'src/gql-scalars/absolute-path.scalar';
 import { SettingsType } from 'src/models';
 import { MsalService } from 'src/msal/msal.service';
 import { Pagination } from '../../args';
@@ -22,7 +23,6 @@ import {
   DriveSettings,
   DriveSettingsDocument,
 } from '../models';
-import { AbsolutePath } from 'src/gql-scalars/absolute-path.scalar';
 
 @Injectable()
 export class DriveItemsService {
@@ -402,8 +402,10 @@ export class DriveItemsService {
         break;
       }
 
-      const driveItems: DriveItemDocument[] = await this.driveItemModel
-        .find({ 'parentReference.id': res.id })
+      const parentId: string = res.id;
+
+      const driveItems = await this.driveItemModel
+        .find({ 'parentReference.id': parentId })
         .exec();
 
       res = driveItems.find((item) => item.name === name) || null;
