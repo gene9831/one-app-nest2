@@ -116,9 +116,6 @@ type Mutation {
   auth: AuthResult!
 
   """Roles: admin"""
-  authCodeUrl: String!
-
-  """Roles: admin"""
   createShareLink(id: String!): String!
 
   """Roles: admin"""
@@ -126,6 +123,9 @@ type Mutation {
 
   """Roles: admin"""
   deleteShareLink(id: String!): String!
+
+  """Roles: admin"""
+  generateAuthCodeUrl: String!
   login(password: String!, username: String!): AuthResult!
 
   """Roles: admin"""

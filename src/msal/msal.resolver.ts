@@ -14,7 +14,7 @@ export class MsalResolver {
   constructor(private readonly msalService: MsalService) {}
 
   @Mutation(() => String, { description: `Roles: ${Role.Admin}` })
-  async authCodeUrl(): Promise<string> {
+  async generateAuthCodeUrl(): Promise<string> {
     return await this.msalService.getAuthCodeUrl();
   }
 
